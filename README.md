@@ -1,99 +1,76 @@
-# World Room
+# EnvioSound
 
-World Room is a realtime audio worldbuilding companion built with React, Vite, WebRTC, and the OpenAI Realtime API. The app lets a user speak naturally with a playful live collaborator that helps invent settings, characters, conflicts, and scene hooks.
+A polished mobile prototype for AI-powered travel vlog creation.
 
-## Current OpenAI Guidance Used
+## From Place to Story
 
-- Realtime sessions are the right architecture for live audio that needs low latency: https://developers.openai.com/api/docs/guides/realtime
-- Browser speech-to-speech apps should use WebRTC for consistent performance: https://developers.openai.com/api/docs/guides/realtime-webrtc
-- The browser should use an ephemeral client secret minted by a trusted server, never `OPENAI_API_KEY`: https://developers.openai.com/api/docs/guides/realtime-webrtc
-- The models page currently lists `gpt-realtime-2` for realtime voice interactions: https://developers.openai.com/api/docs/models
+The shared React/Capacitor app turns travel footage, photos and environmental sound into a Remotion-ready travel video plan.
 
-## Responsibilities
+- Uploads video clips, photos, drone footage and environmental audio
+- Records exactly 15 seconds of environmental audio with microphone permission
+- Builds a Sound DNA profile for the location
+- Free plan uses the local Sound DNA music model with no API call
+- Pro plan is shown at $6/month and sends soundtrack generation to ElevenLabs
+- Studio can use either a generated Sound DNA soundtrack or a selected Library track
+- Generates AI travel narration with ElevenLabs on Pro or local browser narration on Free
+- Assembles a Remotion-ready travel vlog blueprint with clips, captions, maps, transitions, soundtrack and narration
+- Exports format plans for TikTok, Instagram Reels, YouTube Shorts and YouTube Travel Vlog
+- Supports local music Library submissions attached to places
+- Runs a server-side web search copyright check for a chosen Library song before publishing
 
-Browser/client:
-
-- Requests microphone permission with `navigator.mediaDevices.getUserMedia`.
-- Creates the `RTCPeerConnection`, sends the local audio track, and plays the model audio track.
-- Uses the Realtime data channel for session events, transcript deltas, VAD state, starter prompts, and error display.
-- Shows obvious session states: ready, requesting mic, opening room, listening, shaping reply, speaking, reconnecting, and error.
-
-Server/session-token boundary:
-
-- Reads `OPENAI_API_KEY` from `.env` or the shell environment.
-- Calls `POST https://api.openai.com/v1/realtime/client_secrets`.
-- Sends only the short-lived client secret JSON back to the browser.
-- Adds `OpenAI-Safety-Identifier` server-side using a privacy-preserving local hash.
-
-## Setup
+Create a local `.env` file before using ElevenLabs Pro generation or copyright lookup:
 
 ```bash
-cd /Users/evekennedy09/Desktop/sound_app/enviosound-frontend
-cp .env.example .env
+ELEVENLABS_API_KEY=your_key_here
+OPENAI_API_KEY=your_openai_key_here
+OPENAI_SEARCH_MODEL=gpt-5.5
 ```
 
-Edit `.env`:
+Do not commit real API keys. `OPENAI_API_KEY` is used only by the local/server API route for the Library copyright lookup. The lookup uses the OpenAI Responses API with web search enabled so the app can return current, sourced guidance for a specific song; it is not legal advice and should be confirmed with the rights holder.
+
+For phone builds, deploy `server.js` somewhere private and set `VITE_API_BASE_URL` to that server URL before building the app.
+
+## Native iOS app
+
+Open the Xcode project:
 
 ```bash
-OPENAI_API_KEY=sk-proj-your-key-here
+open ios/EnvioSound/EnvioSound.xcodeproj
 ```
 
-Run local development:
+The SwiftUI app includes:
+
+- Onboarding
+- Home
+- Map with tappable place pins
+- Soundtrack generator with simulated loading
+- Track preview
+- Music Library discovery
+- Saved projects
+- Creator profile
+
+The native iOS prototype is static. The shared React/Capacitor app uses the local ElevenLabs proxy for music generation and has no login or payment system.
+
+Note: this machine currently has Command Line Tools selected instead of full Xcode, so simulator verification is unavailable from the terminal until Xcode is installed/selected.
+
+## Android and cross-platform app
+
+This repo includes a Capacitor wrapper so the React prototype can run on Android and iOS from the same UI.
+
+```bash
+npm run cap:sync
+npm run android
+```
+
+Open `android/` in Android Studio to build or run on an Android emulator/device.
+
+The default Capacitor sync targets Android so it does not require CocoaPods. If you later want the Capacitor iOS wrapper too, install CocoaPods and run `cap add ios`.
+
+## Web prototype
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the Vite URL, usually http://localhost:5173. Use a browser with microphone permissions enabled.
-
-Optional overrides:
-
-```bash
-REALTIME_MODEL=gpt-realtime-2
-REALTIME_VOICE=marin
-REALTIME_SERVER_PORT=8787
-```
-
-## Developer Notes
-
-Latency:
-
-- The app uses WebRTC directly from the browser to the Realtime API after receiving an ephemeral token.
-- Semantic VAD is enabled so the model can decide when the user has finished a turn, reducing awkward cutoffs.
-- Spoken responses are intentionally short in the session instructions to keep turn-taking lively.
-- The server is only in the token-minting path, not the live audio path.
-
-Session lifecycle:
-
-- `npm run dev` starts both `server/realtime-session.js` and Vite.
-- Click `Open Mic Session` to mint a client secret, request microphone access, create an SDP offer, and complete the Realtime handshake.
-- Click `Close Session` to close the data channel, stop microphone tracks, close the peer connection, and reset UI state.
-- Realtime sessions have finite lifetimes; refresh or close/reopen the room for long-running use.
-
-Permissions:
-
-- Browsers require HTTPS for microphone access outside `localhost`.
-- If permission is denied, reset the site permission in the browser and reopen the session.
-- The OpenAI API key must stay on the server. Do not put it in Vite client env variables.
-
-Error recovery:
-
-- If token creation fails, confirm `.env` contains `OPENAI_API_KEY` and restart `npm run dev`.
-- If the WebRTC handshake fails, close the session and reopen it to mint a fresh client secret.
-- If connection state becomes `disconnected` or `failed`, the UI moves to reconnecting; close and reopen if it does not recover.
-- If the model speaks over the user, lower background noise and try a headset; VAD quality depends on input audio.
-
-## Validation Checklist
-
-- Microphone permission prompt appears on first session start.
-- Denying microphone permission shows a useful error and leaves the UI recoverable.
-- Opening a session changes the status from ready to live.
-- Speaking triggers listening/thinking/speaking state changes.
-- The model responds with audible audio, not text-only output.
-- Starter prompt buttons send text over the Realtime data channel and produce a spoken response.
-- Transcript shows user speech when transcription events are emitted and assistant transcript deltas during replies.
-- `Close Session` stops the microphone indicator in the browser.
-- Restarting the local token server while the UI is open produces a recoverable token/session error.
-- Closing and reopening the session after a failed connection mints a new token and reconnects.
-- Conversation quality: ask for a setting, a character, a conflict, and a scene hook; responses should stay short, vivid, and collaborative.
+`npm run dev` starts both Vite and the local API proxy for ElevenLabs generation, narration and OpenAI web-search copyright lookup. The web app is still available at `http://localhost:5173/`.

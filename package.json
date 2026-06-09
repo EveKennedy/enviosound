@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "dev:client": "vite",
-    "dev:server": "node server/realtime-session.js",
+    "dev": "node dev.js",
+    "dev:web": "vite --host 0.0.0.0",
+    "api": "node server.js --api-only",
     "serve": "npm run build && node server.js",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",

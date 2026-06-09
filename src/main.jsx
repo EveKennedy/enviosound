@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.jsx";
+import { App } from "./App.jsx";
 import "./styles.css";
 
 class ErrorBoundary extends React.Component {
@@ -18,7 +18,7 @@ class ErrorBoundary extends React.Component {
       return (
         <main className="startup-fallback">
           <section>
-            <strong>World Room could not start</strong>
+            <strong>EnvioSound could not start</strong>
             <p>{this.state.error.message}</p>
             <button onClick={() => window.location.reload()}>Reload app</button>
           </section>

@@ -35,6 +35,11 @@ function createServer() {
       return;
     }
 
+    if (request.url === "/api/check-copyright" && request.method === "POST") {
+      await checkCopyright(request, response);
+      return;
+    }
+
     if (apiOnly) {
       sendJson(response, 404, { error: "Not found" });
       return;
@@ -130,6 +135,68 @@ async function generateNarration(request, response) {
   }
 }
 
+async function checkCopyright(request, response) {
+  if (!process.env.OPENAI_API_KEY) {
+    sendJson(response, 500, { error: "OPENAI_API_KEY is not set" });
+    return;
+  }
+
+  try {
+    const body = JSON.parse(await readBody(request));
+    const song = String(body.song || "").trim();
+    const artist = String(body.artist || "").trim();
+    const usage = String(body.usage || "travel vlog soundtrack").trim();
+
+    if (!song || !artist) {
+      sendJson(response, 400, { error: "Song and artist are required" });
+      return;
+    }
+
+    const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_SEARCH_MODEL || "gpt-5.5",
+        tools: [{ type: "web_search" }],
+        input: [
+          "Search the web for current copyright, licensing, and usage guidance for this specific song.",
+          `Song: ${song}`,
+          `Artist/rightsholder: ${artist}`,
+          `Intended use: ${usage}`,
+          "Return ONLY compact JSON with keys: recommendation, summary, steps, sources.",
+          "recommendation must be one of: Likely needs license, Ask rights holder, Check platform terms, Public-domain claim needs verification, Unknown.",
+          "summary must be plain language and must say this is not legal advice.",
+          "steps must be an array of concrete next actions.",
+          "sources must be an array of objects with title and url. Prefer official artist, label, distributor, platform, PRO, or government sources."
+        ].join("\n")
+      })
+    });
+
+    const data = await openaiResponse.json().catch(async () => ({ error: await openaiResponse.text() }));
+    if (!openaiResponse.ok) {
+      sendJson(response, openaiResponse.status, { error: readOpenAIError(data) });
+      return;
+    }
+
+    const text = extractResponsesText(data);
+    const parsed = parseJsonText(text);
+    const sources = Array.isArray(parsed.sources) ? parsed.sources : extractResponseSources(data);
+
+    sendJson(response, 200, {
+      recommendation: parsed.recommendation || "Unknown",
+      summary: parsed.summary || text || "No copyright guidance was returned. This is not legal advice.",
+      steps: Array.isArray(parsed.steps) ? parsed.steps : ["Identify the rights holder.", "Request written sync/master-use permission.", "Keep proof of permission with the project."],
+      sources: sources.slice(0, 5),
+      checkedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    sendJson(response, 500, { error: error.message || "Copyright lookup failed" });
+  }
+}
+
 function buildPrompt(body) {
   const profile = body.profile || {};
   const dna = body.soundDna || {};
@@ -188,6 +255,48 @@ async function readElevenLabsError(response) {
   } catch {
     return text || "ElevenLabs request failed";
   }
+}
+
+function readOpenAIError(data) {
+  if (typeof data.error === "string") return data.error;
+  if (typeof data.error?.message === "string") return data.error.message;
+  if (typeof data.message === "string") return data.message;
+  return "OpenAI web search request failed";
+}
+
+function extractResponsesText(data) {
+  if (typeof data.output_text === "string") return data.output_text;
+  const chunks = [];
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      if (typeof content.text === "string") chunks.push(content.text);
+    }
+  }
+  return chunks.join("\n").trim();
+}
+
+function parseJsonText(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return {};
+  const jsonText = trimmed.startsWith("{") ? trimmed : trimmed.match(/\{[\s\S]*\}/)?.[0];
+  if (!jsonText) return {};
+  try {
+    return JSON.parse(jsonText);
+  } catch {
+    return {};
+  }
+}
+
+function extractResponseSources(data) {
+  const sources = [];
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      for (const annotation of content.annotations || []) {
+        if (annotation.url) sources.push({ title: annotation.title || annotation.url, url: annotation.url });
+      }
+    }
+  }
+  return sources.filter((source, index, all) => all.findIndex((other) => other.url === source.url) === index);
 }
 
 function sendJson(response, status, data) {
