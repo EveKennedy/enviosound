@@ -78,7 +78,7 @@ function App() {
           <>
             <div className="screen">
               {tab === "home" && <Home onChoose={choosePlace} />}
-              {tab === "map" && <MapScreen selected={selectedPlace} onSelect={choosePlace} onCreate={(place) => choosePlace(place, "generate")} />}
+              {tab === "map" && <MapScreen selected={selectedPlace} onBack={() => setTab("home")} onSelect={choosePlace} onCreate={(place) => choosePlace(place, "generate")} />}
               {tab === "generate" && (
                 <Generator
                   location={location}
@@ -87,20 +87,22 @@ function App() {
                   generatedTrack={generatedTrack}
                   setGeneratedTrack={setGeneratedTrack}
                   onPreview={() => setTab("preview")}
+                  onBack={() => setTab("home")}
                 />
               )}
               {tab === "preview" && (
                 <Preview
                   track={generatedTrack}
                   place={currentPlace}
+                  onBack={() => setTab("generate")}
                   onUse={() => {
                     setTab("saved");
                     setShowProfile(false);
                   }}
                 />
               )}
-              {tab === "artists" && <Artists />}
-              {tab === "saved" && (showProfile ? <Profile onBack={() => setShowProfile(false)} /> : <Saved onProfile={() => setShowProfile(true)} />)}
+              {tab === "artists" && <Artists onBack={() => setTab("home")} />}
+              {tab === "saved" && (showProfile ? <Profile onBack={() => setShowProfile(false)} /> : <Saved onBack={() => setTab("home")} onProfile={() => setShowProfile(true)} />)}
             </div>
             {tab !== "preview" && (
               <nav className="tabbar">
@@ -179,7 +181,7 @@ function Home({ onChoose }) {
   );
 }
 
-function MapScreen({ selected, onSelect, onCreate }) {
+function MapScreen({ selected, onBack, onSelect, onCreate }) {
   const pinPositions = {
     Galway: [18, 23],
     Dublin: [36, 36],
@@ -191,6 +193,7 @@ function MapScreen({ selected, onSelect, onCreate }) {
 
   return (
     <div className="map-screen">
+      <button className="return-button" onClick={onBack}>Return home</button>
       <header className="top-header compact">
         <div>
           <p>Location average mode</p>
@@ -229,7 +232,7 @@ function MapScreen({ selected, onSelect, onCreate }) {
   );
 }
 
-function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview }) {
+function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview, onBack }) {
   const [mode, setMode] = useState("location");
   const [status, setStatus] = useState("idle");
   const [countdown, setCountdown] = useState(15);
@@ -312,6 +315,7 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
 
   return (
     <div className="stack generator">
+      <button className="return-button" onClick={onBack}>Return home</button>
       <header className="top-header compact">
         <div>
           <p>Place-to-Music Generator</p>
@@ -357,7 +361,31 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       {generatedTrack && (
         <GeneratedResult track={generatedTrack} place={place} onPreview={onPreview} sourceRef={sourceRef} />
       )}
+
+      <GeneratorImageGallery activePlace={place} />
     </div>
+  );
+}
+
+function GeneratorImageGallery({ activePlace }) {
+  const galleryPlaces = [activePlace, ...places.filter((place) => place.id !== activePlace.id)].slice(0, 5);
+
+  return (
+    <section className="generator-gallery">
+      <div className="section-title">
+        <h3>Sound profiles by place</h3>
+        <small>Visual mood board</small>
+      </div>
+      <div className="gallery-scroll">
+        {galleryPlaces.map((place) => (
+          <article className="gallery-card" key={place.id} style={{ backgroundImage: `linear-gradient(180deg, rgba(7,10,18,.05), rgba(7,10,18,.76)), url(${place.image})` }}>
+            <span>{place.vibe}</span>
+            <strong>{place.name}</strong>
+            <small>{place.sounds.slice(0, 3).join(" · ")}</small>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -413,13 +441,16 @@ function SelectRow({ label, value, setValue, options }) {
   );
 }
 
-function Preview({ track, place, onUse }) {
+function Preview({ track, place, onBack, onUse }) {
   const sourceRef = useRef(null);
   const safeTrack = track || createFallbackTrack(place);
 
   return (
     <div className="preview-screen">
-      <button className="back-link" onClick={onUse}>Done</button>
+      <div className="preview-actions">
+        <button className="back-link dark-text" onClick={onBack}>Return to generator</button>
+        <button className="back-link dark-text" onClick={onUse}>Use in vlog</button>
+      </div>
       <div className="cover-art" style={{ backgroundImage: `linear-gradient(180deg, rgba(8,10,16,.05), rgba(8,10,16,.82)), url(${place.image})` }}>
         <span>Generated loop</span>
         <h2>{safeTrack.title}</h2>
@@ -439,9 +470,10 @@ function Preview({ track, place, onUse }) {
   );
 }
 
-function Artists() {
+function Artists({ onBack }) {
   return (
     <div className="stack">
+      <button className="return-button" onClick={onBack}>Return home</button>
       <header className="top-header compact">
         <div>
           <p>Support local artists</p>
@@ -467,12 +499,13 @@ function Artists() {
   );
 }
 
-function Saved({ onProfile }) {
+function Saved({ onBack, onProfile }) {
   const saved = JSON.parse(localStorage.getItem("enviosound-saved") || "[]");
   const allProjects = [...saved.map((track) => ({ name: `${track.title} Project`, location: track.source, mood: track.mood, track: track.title, status: "Ready to export" })), ...projects];
 
   return (
     <div className="stack">
+      <button className="return-button" onClick={onBack}>Return home</button>
       <header className="top-header">
         <div>
           <p>Saved projects</p>

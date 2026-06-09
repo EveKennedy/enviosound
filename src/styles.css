@@ -118,6 +118,18 @@ a {
   gap: 18px;
 }
 
+.return-button {
+  align-self: flex-start;
+  min-height: 38px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: #fff;
+  color: #151823;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(22, 28, 42, .08);
+}
+
 .top-header {
   display: flex;
   align-items: flex-start;
@@ -580,6 +592,55 @@ a {
   box-shadow: 0 16px 32px rgba(25, 30, 38, .08);
 }
 
+.generator-gallery {
+  display: grid;
+  gap: 12px;
+}
+
+.gallery-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 76%;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x mandatory;
+}
+
+.gallery-card {
+  min-height: 176px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 5px;
+  border-radius: 26px;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 18px 34px rgba(31, 34, 42, .12);
+  scroll-snap-align: start;
+}
+
+.gallery-card span {
+  align-self: flex-start;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.18);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.gallery-card strong {
+  font-size: 23px;
+  line-height: 1;
+}
+
+.gallery-card small {
+  color: rgba(255,255,255,.78);
+  font-weight: 750;
+}
+
 .record-card h3 {
   margin: 0 0 6px;
   font-size: 18px;
@@ -786,6 +847,12 @@ a {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.preview-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .back-link {
