@@ -2,6 +2,19 @@
 
 A polished mobile prototype for travel vlog soundtrack discovery and generation.
 
+## Place-to-Music Generator
+
+The shared React/Capacitor app now includes a real client-side generation pipeline:
+
+- Records exactly 15 seconds of environmental audio with microphone permission
+- Shows live input bars and a countdown while recording
+- Analyses average volume, dynamic range, brightness, low-frequency energy, noise, pulse intensity, calm/busy, and nature/urban classification
+- Generates a playable 15-30 second soundtrack loop with Web Audio synthesis
+- Exports the generated loop as a WAV file
+- Supports location average profiles when the user does not record
+
+This is labelled in-app as AI-assisted sound analysis and procedural music generation. It is not presented as a trained AI music model.
+
 ## Native iOS app
 
 Open the Xcode project:
