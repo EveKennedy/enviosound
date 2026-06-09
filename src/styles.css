@@ -16,6 +16,41 @@ body {
   min-height: 100vh;
 }
 
+.startup-fallback {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f8f7f2;
+  color: #151823;
+}
+
+.startup-fallback section {
+  width: min(100%, 360px);
+  padding: 22px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(22, 28, 42, .12);
+}
+
+.startup-fallback strong {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.startup-fallback p {
+  color: #6a686b;
+}
+
+.startup-fallback button {
+  padding: 12px 14px;
+  border-radius: 999px;
+  background: #111520;
+  color: #fff;
+  font-weight: 850;
+}
+
 button,
 select {
   font: inherit;
