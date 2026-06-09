@@ -40,7 +40,7 @@ const tabs = [
   { id: "saved", label: "Saved", icon: "▣" }
 ];
 
-function App() {
+export function App() {
   const [onboarded, setOnboarded] = useState(false);
   const [tab, setTab] = useState("home");
   const [selectedPlace, setSelectedPlace] = useState(places[0]);
@@ -982,5 +982,3 @@ function wait(ms) {
 function clamp(value) {
   return Math.min(1, Math.max(0, value));
 }
-
-export default App;
