@@ -141,7 +141,7 @@ function App() {
       <section className="phone">
         <div className="status-bar">
           <span>9:41</span>
-          <span>5G 􀙇</span>
+          <span>5G 100%</span>
         </div>
 
         {!onboarded ? (
