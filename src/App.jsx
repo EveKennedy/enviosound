@@ -20,10 +20,10 @@ const locationProfiles = {
 };
 
 const artists = [
-  { name: "Aoife Lane", location: "Galway", song: "Spanish Arch Sunrise", vibe: "indie folk" },
-  { name: "Mika Dubois", location: "Paris", song: "Cafe After Rain", vibe: "dreamy piano" },
-  { name: "Rafa Sol", location: "Barcelona", song: "Gracia Noon", vibe: "sunlit guitar" },
-  { name: "Niamh K.", location: "Dublin", song: "Liffey Gold", vibe: "city pop" }
+  { name: "Aoife Lane", location: "Galway", song: "Spanish Arch Sunrise", vibe: "indie folk", tone: 392 },
+  { name: "Mika Dubois", location: "Paris", song: "Cafe After Rain", vibe: "dreamy piano", tone: 330 },
+  { name: "Rafa Sol", location: "Barcelona", song: "Gracia Noon", vibe: "sunlit guitar", tone: 440 },
+  { name: "Niamh K.", location: "Dublin", song: "Liffey Gold", vibe: "city pop", tone: 523 }
 ];
 
 const projects = [
@@ -47,6 +47,7 @@ function App() {
   const [location, setLocation] = useState("Galway");
   const [generatedTrack, setGeneratedTrack] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [toast, setToast] = useState("");
 
   const currentPlace = useMemo(
     () => places.find((place) => place.name === location) || selectedPlace,
@@ -64,6 +65,12 @@ function App() {
     setTab(nextTab);
   };
 
+  const notify = (message) => {
+    setToast(message);
+    window.clearTimeout(notify.timer);
+    notify.timer = window.setTimeout(() => setToast(""), 2400);
+  };
+
   return (
     <main className="app-shell">
       <section className="phone">
@@ -77,7 +84,7 @@ function App() {
         ) : (
           <>
             <div className="screen">
-              {tab === "home" && <Home onChoose={choosePlace} />}
+              {tab === "home" && <Home onChoose={choosePlace} notify={notify} />}
               {tab === "map" && <MapScreen selected={selectedPlace} onBack={() => setTab("home")} onSelect={choosePlace} onCreate={(place) => choosePlace(place, "generate")} />}
               {tab === "generate" && (
                 <Generator
@@ -88,6 +95,7 @@ function App() {
                   setGeneratedTrack={setGeneratedTrack}
                   onPreview={() => setTab("preview")}
                   onBack={() => setTab("home")}
+                  notify={notify}
                 />
               )}
               {tab === "preview" && (
@@ -101,9 +109,10 @@ function App() {
                   }}
                 />
               )}
-              {tab === "artists" && <Artists onBack={() => setTab("home")} />}
-              {tab === "saved" && (showProfile ? <Profile onBack={() => setShowProfile(false)} /> : <Saved onBack={() => setTab("home")} onProfile={() => setShowProfile(true)} />)}
+              {tab === "artists" && <Artists onBack={() => setTab("home")} notify={notify} />}
+              {tab === "saved" && (showProfile ? <Profile onBack={() => setShowProfile(false)} notify={notify} /> : <Saved onBack={() => setTab("home")} onProfile={() => setShowProfile(true)} notify={notify} />)}
             </div>
+            {toast && <div className="toast">{toast}</div>}
             {tab !== "preview" && (
               <nav className="tabbar">
                 {tabs.map((item) => (
@@ -142,7 +151,12 @@ function Onboarding({ onStart, onExplore }) {
   );
 }
 
-function Home({ onChoose }) {
+function Home({ onChoose, notify }) {
+  const [query, setQuery] = useState("");
+  const visiblePlaces = places
+    .slice(0, 6)
+    .filter((place) => `${place.name} ${place.vibe} ${place.sounds.join(" ")}`.toLowerCase().includes(query.toLowerCase()));
+
   return (
     <div className="stack">
       <header className="top-header">
@@ -152,7 +166,10 @@ function Home({ onChoose }) {
         </div>
         <div className="avatar">TC</div>
       </header>
-      <label className="search">Search a city, landmark, or vibe</label>
+      <label className="search">
+        <span>⌕</span>
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a city, landmark, or vibe" />
+      </label>
       <div className="value-row">
         <span>Generated from environmental sound features</span>
         <span>Made for travel vlogs, reels and short films</span>
@@ -163,7 +180,7 @@ function Home({ onChoose }) {
           <small>Creator-safe loops</small>
         </div>
         <div className="place-list">
-          {places.slice(0, 5).map((place) => (
+          {visiblePlaces.map((place) => (
             <article className="place-card" key={place.id} style={{ backgroundImage: `linear-gradient(180deg, rgba(7,10,18,.1), rgba(7,10,18,.86)), url(${place.image})` }}>
               <div>
                 <strong>{place.name}</strong>
@@ -175,6 +192,13 @@ function Home({ onChoose }) {
               </div>
             </article>
           ))}
+          {!visiblePlaces.length && (
+            <div className="empty-state">
+              <strong>No exact match yet</strong>
+              <span>Try “coastal”, “urban”, “waves”, “Paris”, or “Dublin”.</span>
+              <button onClick={() => { setQuery(""); notify("Search cleared"); }}>Clear search</button>
+            </div>
+          )}
         </div>
       </section>
     </div>
@@ -232,7 +256,7 @@ function MapScreen({ selected, onBack, onSelect, onCreate }) {
   );
 }
 
-function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview, onBack }) {
+function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview, onBack, notify }) {
   const [mode, setMode] = useState("location");
   const [status, setStatus] = useState("idle");
   const [countdown, setCountdown] = useState(15);
@@ -359,7 +383,7 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       )}
 
       {generatedTrack && (
-        <GeneratedResult track={generatedTrack} place={place} onPreview={onPreview} sourceRef={sourceRef} />
+        <GeneratedResult track={generatedTrack} place={place} onPreview={onPreview} sourceRef={sourceRef} notify={notify} />
       )}
 
       <GeneratorImageGallery activePlace={place} />
@@ -389,7 +413,7 @@ function GeneratorImageGallery({ activePlace }) {
   );
 }
 
-function GeneratedResult({ track, place, onPreview, sourceRef }) {
+function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
   return (
     <div className="result-card expanded">
       <div className="mini-cover" style={{ backgroundImage: `url(${place.image})` }} />
@@ -407,8 +431,8 @@ function GeneratedResult({ track, place, onPreview, sourceRef }) {
         </div>
         <FeatureGrid features={track.features} />
         <div className="button-row">
-          <button onClick={() => playTrack(track, sourceRef)}>Play</button>
-          <button onClick={() => saveTrack(track)}>Save</button>
+          <button onClick={() => { playTrack(track, sourceRef); notify("Playing generated loop"); }}>Play</button>
+          <button onClick={() => { saveTrack(track); notify("Saved to projects"); }}>Save</button>
           <a className="download-button" href={track.wavUrl} download={`${track.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export</a>
           <button className="dark" onClick={onPreview}>Preview</button>
         </div>
@@ -470,7 +494,9 @@ function Preview({ track, place, onBack, onUse }) {
   );
 }
 
-function Artists({ onBack }) {
+function Artists({ onBack, notify }) {
+  const artistSourceRef = useRef(null);
+
   return (
     <div className="stack">
       <button className="return-button" onClick={onBack}>Return home</button>
@@ -490,8 +516,8 @@ function Artists({ onBack }) {
               <p>{artist.location} · {artist.song}</p>
               <span>{artist.vibe}</span>
             </div>
-            <button>Play</button>
-            <button className="credit">Use with credit</button>
+            <button onClick={() => { playArtistClip(artist, artistSourceRef); notify(`Playing ${artist.song}`); }}>Play</button>
+            <button className="credit" onClick={() => { saveArtistCredit(artist); notify(`${artist.name} credit added`); }}>Use with credit</button>
           </article>
         ))}
       </div>
@@ -499,8 +525,9 @@ function Artists({ onBack }) {
   );
 }
 
-function Saved({ onBack, onProfile }) {
+function Saved({ onBack, onProfile, notify }) {
   const saved = JSON.parse(localStorage.getItem("enviosound-saved") || "[]");
+  const credits = JSON.parse(localStorage.getItem("enviosound-credits") || "[]");
   const allProjects = [...saved.map((track) => ({ name: `${track.title} Project`, location: track.source, mood: track.mood, track: track.title, status: "Ready to export" })), ...projects];
 
   return (
@@ -520,14 +547,27 @@ function Saved({ onBack, onProfile }) {
             <p>{project.location} · {project.mood}</p>
             <span>{project.track}</span>
           </div>
-          <strong>{project.status}</strong>
+          <div className="project-actions">
+            <strong>{project.status}</strong>
+            <button onClick={() => notify(`Opened ${project.name}`)}>Open</button>
+            <button onClick={() => notify(`${project.track} marked for export`) }>Export</button>
+          </div>
         </article>
       ))}
+      <section className="credits-panel">
+        <h3>Artist credits used</h3>
+        {credits.length ? credits.map((credit) => (
+          <div key={`${credit.artist}-${credit.song}`}>
+            <span>{credit.song}</span>
+            <strong>{credit.artist}</strong>
+          </div>
+        )) : <p>No local artist credits added yet.</p>}
+      </section>
     </div>
   );
 }
 
-function Profile({ onBack }) {
+function Profile({ onBack, notify }) {
   return (
     <div className="stack">
       <button className="back-link dark-text" onClick={onBack}>Back</button>
@@ -542,10 +582,10 @@ function Profile({ onBack }) {
         ["Artist credits used", "4 local artists"],
         ["Settings", "Licenses, downloads, creator defaults"]
       ].map(([label, value]) => (
-        <article className="settings-row" key={label}>
+        <button className="settings-row" key={label} onClick={() => notify(`${label} opened`)}>
           <span>{label}</span>
           <strong>{value}</strong>
-        </article>
+        </button>
       ))}
     </div>
   );
@@ -827,6 +867,35 @@ function playTrack(track, sourceRef) {
 function saveTrack(track) {
   const saved = JSON.parse(localStorage.getItem("enviosound-saved") || "[]");
   localStorage.setItem("enviosound-saved", JSON.stringify([{ title: track.title, mood: track.mood, source: track.source }, ...saved].slice(0, 10)));
+}
+
+function playArtistClip(artist, sourceRef) {
+  const context = new AudioContext();
+  if (sourceRef.current) sourceRef.current.stop();
+  const destination = context.createGain();
+  destination.gain.value = 0.22;
+  destination.connect(context.destination);
+  const notes = [0, 4, 7, 12, 7, 4, 2, 0];
+  notes.forEach((semi, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = artist.vibe.includes("piano") ? "triangle" : artist.vibe.includes("city") ? "square" : "sine";
+    oscillator.frequency.value = artist.tone * Math.pow(2, semi / 12);
+    const start = context.currentTime + index * 0.22;
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
+    oscillator.connect(gain).connect(destination);
+    oscillator.start(start);
+    oscillator.stop(start + 0.26);
+    if (index === 0) sourceRef.current = oscillator;
+  });
+}
+
+function saveArtistCredit(artist) {
+  const credits = JSON.parse(localStorage.getItem("enviosound-credits") || "[]");
+  const next = [{ artist: artist.name, song: artist.song, location: artist.location }, ...credits.filter((credit) => credit.song !== artist.song)].slice(0, 8);
+  localStorage.setItem("enviosound-credits", JSON.stringify(next));
 }
 
 function createFallbackTrack(place) {
