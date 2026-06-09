@@ -1,0 +1,9 @@
+{
+  "appId": "com.enviosound.prototype",
+  "appName": "EnvioSound",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

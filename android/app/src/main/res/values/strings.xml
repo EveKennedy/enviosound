@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">EnvioSound</string>
+    <string name="title_activity_main">EnvioSound</string>
+    <string name="package_name">com.enviosound.prototype</string>
+    <string name="custom_url_scheme">com.enviosound.prototype</string>
+</resources>
