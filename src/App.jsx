@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 
 const places = [
   { id: "galway", name: "Galway", vibe: "Coastal busker mood", tracks: 42, image: "https://images.unsplash.com/photo-1522872527593-0f30223eb522?auto=format&fit=crop&w=900&q=80", sounds: ["waves", "wind", "buskers", "soft crowds"], reco: "Atlantic Drift", desc: "Waves, wind, buskers, soft crowds, and a coastal music profile." },
