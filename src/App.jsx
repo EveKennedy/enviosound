@@ -181,7 +181,7 @@ function Home({ onChoose, notify }) {
         </div>
         <div className="place-list">
           {visiblePlaces.map((place) => (
-            <article className="place-card" key={place.id} style={{ backgroundImage: `linear-gradient(180deg, rgba(7,10,18,.1), rgba(7,10,18,.86)), url(${place.image})` }}>
+            <article className="place-card" key={place.id} style={{ backgroundImage: `url(${place.image})` }}>
               <div>
                 <strong>{place.name}</strong>
                 <span>{place.vibe}</span>
@@ -402,7 +402,7 @@ function GeneratorImageGallery({ activePlace }) {
       </div>
       <div className="gallery-scroll">
         {galleryPlaces.map((place) => (
-          <article className="gallery-card" key={place.id} style={{ backgroundImage: `linear-gradient(180deg, rgba(7,10,18,.05), rgba(7,10,18,.76)), url(${place.image})` }}>
+          <article className="gallery-card" key={place.id} style={{ backgroundImage: `url(${place.image})` }}>
             <span>{place.vibe}</span>
             <strong>{place.name}</strong>
             <small>{place.sounds.slice(0, 3).join(" · ")}</small>
@@ -475,7 +475,7 @@ function Preview({ track, place, onBack, onUse }) {
         <button className="back-link dark-text" onClick={onBack}>Return to generator</button>
         <button className="back-link dark-text" onClick={onUse}>Use in vlog</button>
       </div>
-      <div className="cover-art" style={{ backgroundImage: `linear-gradient(180deg, rgba(8,10,16,.05), rgba(8,10,16,.82)), url(${place.image})` }}>
+      <div className="cover-art" style={{ backgroundImage: `url(${place.image})` }}>
         <span>Generated loop</span>
         <h2>{safeTrack.title}</h2>
         <p>{safeTrack.mood}</p>
