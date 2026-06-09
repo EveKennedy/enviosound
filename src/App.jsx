@@ -294,9 +294,10 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
     setStatus("analysing");
     await wait(320);
     const profile = locationProfiles[location] || locationProfiles.Galway;
+    const soundDna = createSoundDna(profile, location);
     setStatus("generating");
     await wait(320);
-    const track = await createProceduralTrack(profile, `selected location: ${location}`);
+    const track = await createProceduralTrack(profile, `selected location: ${location}`, null, soundDna);
     setGeneratedTrack(track);
     setStatus("ready");
   };
@@ -334,8 +335,9 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
         const audioBuffer = await decodeContext.decodeAudioData(arrayBuffer.slice(0));
         await decodeContext.close();
         const profile = analyseAudioBuffer(audioBuffer);
+        const soundDna = createSoundDna(profile, "Recorded environment");
         setStatus("generating");
-        const track = await createProceduralTrack(profile, "recorded 15-second environment", blob);
+        const track = await createProceduralTrack(profile, "recorded 15-second environment", blob, soundDna);
         setGeneratedTrack(track);
         setStatus("ready");
       };
@@ -397,8 +399,8 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       {status !== "idle" && status !== "ready" && (
         <div className="loading-card">
           <div className="spinner" />
-          <span>{status === "recording" ? "Recording your environment..." : status === "analysing" ? "Analysing your environment..." : "Creating your travel soundtrack..."}</span>
-          <small>Extracting volume, dynamic range, brightness, low energy, pulse and texture.</small>
+          <span>{status === "recording" ? "Recording your environment..." : status === "analysing" ? "Building Sound DNA..." : "Creating your travel soundtrack..."}</span>
+          <small>Extracting natural sound, human activity, urban activity, rhythm, range and frequency shape.</small>
         </div>
       )}
 
@@ -435,28 +437,102 @@ function GeneratorImageGallery({ activePlace }) {
 
 function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
   return (
-    <div className="result-card expanded">
-      <div className="mini-cover" style={{ backgroundImage: `url(${place.image})` }} />
-      <div className="result-copy">
-        <p>Generated from environmental sound features</p>
-        <h3>{track.title}</h3>
-        <span>{track.source} · {track.mood}</span>
-        <div className="profile-list">
-          {track.profile.detected.map((item) => <small key={item}>{item}</small>)}
-        </div>
-        <div className="meta-grid">
-          <small>BPM <b>{track.bpm}</b></small>
-          <small>Instruments <b>{track.instruments.join(", ")}</b></small>
-          <small>License <b>Creator-safe original loop</b></small>
-        </div>
-        <FeatureGrid features={track.features} />
-        <div className="button-row">
-          <button onClick={() => { playTrack(track, sourceRef); notify("Playing generated loop"); }}>Play</button>
-          <button onClick={() => { saveTrack(track); notify("Saved to projects"); }}>Save</button>
-          <a className="download-button" href={track.wavUrl} onClick={() => notify("Exporting WAV loop")} download={`${track.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export</a>
-          <button className="dark" onClick={onPreview}>Preview</button>
+    <div className="generated-stack">
+      <SoundDnaPanel soundDna={track.soundDna} place={place} notify={notify} />
+      <div className="result-card expanded">
+        <div className="mini-cover" style={{ backgroundImage: `url(${place.image})` }} />
+        <div className="result-copy">
+          <p>Generated from Sound DNA</p>
+          <h3>{track.title}</h3>
+          <span>{track.source} · {track.mood}</span>
+          <div className="profile-list">
+            {track.profile.detected.map((item) => <small key={item}>{item}</small>)}
+          </div>
+          <div className="meta-grid">
+            <small>BPM <b>{track.bpm}</b></small>
+            <small>Instruments <b>{track.instruments.join(", ")}</b></small>
+            <small>License <b>Creator-safe original loop</b></small>
+          </div>
+          <FeatureGrid features={track.features} />
+          <div className="button-row">
+            <button onClick={() => { playTrack(track, sourceRef); notify("Playing generated loop"); }}>Play</button>
+            <button onClick={() => { saveTrack(track); notify("Saved to projects"); }}>Save</button>
+            <a className="download-button" href={track.wavUrl} onClick={() => notify("Exporting WAV loop")} download={`${track.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export</a>
+            <button className="dark" onClick={onPreview}>Preview</button>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SoundDnaPanel({ soundDna, place, notify }) {
+  const points = soundDna.radar.map((value, index) => {
+    const angle = -90 + index * 72;
+    const radius = 18 + value * 30;
+    return `${50 + Math.cos(angle * Math.PI / 180) * radius},${50 + Math.sin(angle * Math.PI / 180) * radius}`;
+  }).join(" ");
+
+  return (
+    <section className="sound-dna-card">
+      <div className="sound-dna-heading">
+        <div>
+          <p>Sound DNA</p>
+          <h3>{soundDna.title}</h3>
+        </div>
+        <button onClick={() => {
+          navigator.clipboard?.writeText(`Sound DNA of ${place.name}: Natural ${soundDna.scores.natural}%, Human Activity ${soundDna.scores.human}%, Urban Activity ${soundDna.scores.urban}%.`);
+          notify("Sound DNA card copied");
+        }}>Share card</button>
+      </div>
+      <div className="sound-dna-visuals">
+        <svg className="radar-chart" viewBox="0 0 100 100" aria-label="Sound DNA radar chart">
+          <polygon points="50,14 84,38 71,78 29,78 16,38" />
+          <polygon points={points} />
+          {soundDna.radar.map((value, index) => {
+            const angle = -90 + index * 72;
+            return <circle key={index} cx={50 + Math.cos(angle * Math.PI / 180) * (18 + value * 30)} cy={50 + Math.sin(angle * Math.PI / 180) * (18 + value * 30)} r="2.4" />;
+          })}
+        </svg>
+        <div className="score-rings">
+          <ScoreRing label="Natural" value={soundDna.scores.natural} />
+          <ScoreRing label="Human" value={soundDna.scores.human} />
+          <ScoreRing label="Urban" value={soundDna.scores.urban} />
+        </div>
+      </div>
+      <div className="dna-breakdown">
+        <DnaGroup title="Natural sounds" items={soundDna.groups.natural} />
+        <DnaGroup title="Human activity" items={soundDna.groups.human} />
+        <DnaGroup title="Urban activity" items={soundDna.groups.urban} />
+        <DnaGroup title="Acoustic characteristics" items={soundDna.acoustics} />
+      </div>
+      <div className="dna-characteristics">
+        {soundDna.characteristics.map((item) => <span key={item}>{item}</span>)}
+      </div>
+      <p className="dna-explainer">Every place has a unique acoustic fingerprint. EnvioSound uses this Sound DNA to create music that reflects the environment.</p>
+    </section>
+  );
+}
+
+function ScoreRing({ label, value }) {
+  return (
+    <div className="score-ring" style={{ "--score": `${value * 3.6}deg` }}>
+      <strong>{value}%</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function DnaGroup({ title, items }) {
+  return (
+    <div>
+      <strong>{title}</strong>
+      {Object.entries(items).map(([label, value]) => (
+        <div className="dna-row" key={label}>
+          <span>{label}</span>
+          <b>{value}%</b>
+        </div>
+      ))}
     </div>
   );
 }
@@ -632,11 +708,11 @@ function Profile({ onBack, notify }) {
   );
 }
 
-async function createProceduralTrack(profile, source, recordingBlob = null) {
-  const bpm = chooseBpm(profile);
+async function createProceduralTrack(profile, source, recordingBlob = null, soundDna = createSoundDna(profile, source)) {
+  const bpm = chooseBpm(profile, soundDna);
   const mood = chooseMood(profile);
   const title = chooseTitle(profile, source);
-  const instruments = chooseInstruments(profile);
+  const instruments = chooseInstruments(profile, soundDna);
   const duration = profile.calmBusy === "busy" ? 18 : 22;
   const sampleRate = 44100;
   const context = new OfflineAudioContext(2, duration * sampleRate, sampleRate);
@@ -653,7 +729,7 @@ async function createProceduralTrack(profile, source, recordingBlob = null) {
   addChordProgression(context, master, root, chords, beat, duration, profile);
   addMelody(context, master, root, scale, beat, duration, profile);
   addBass(context, master, root, beat, duration, profile);
-  addPercussion(context, master, beat, duration, profile);
+  addPercussion(context, master, beat, duration, profile, soundDna);
 
   const buffer = await context.startRendering();
   const wavBlob = encodeWav(buffer);
@@ -668,6 +744,7 @@ async function createProceduralTrack(profile, source, recordingBlob = null) {
     bpm,
     instruments,
     profile,
+    soundDna,
     buffer,
     wavBlob,
     wavUrl,
@@ -682,6 +759,54 @@ async function createProceduralTrack(profile, source, recordingBlob = null) {
       "Calm/busy": profile.calmBusy,
       "Nature/urban": profile.natureUrban
     }
+  };
+}
+
+function createSoundDna(profile, label) {
+  const natural = Math.round(clamp((profile.natureUrban === "nature" ? 0.34 : 0.08) + profile.lowEnergy * 0.22 + (1 - profile.noiseLevel) * 0.20 + (1 - profile.pulseIntensity) * 0.14 + (profile.brightness > 0.62 ? 0.10 : 0.04)) * 100);
+  const urban = Math.round(clamp((profile.natureUrban === "urban" ? 0.28 : 0.06) + profile.noiseLevel * 0.34 + profile.pulseIntensity * 0.22 + profile.lowEnergy * 0.10) * 100);
+  const human = Math.max(0, Math.min(100, 100 - natural - urban));
+  const complexity = Math.round(clamp(profile.noiseLevel * 0.34 + profile.dynamicRange * 0.30 + profile.brightness * 0.20 + profile.pulseIntensity * 0.16) * 100);
+  const frequencyRange = Math.round(clamp(profile.brightness * 0.52 + profile.lowEnergy * 0.38 + profile.dynamicRange * 0.10) * 100);
+
+  return {
+    title: `${label.replace("selected location: ", "")} Sound DNA`,
+    scores: { natural, human, urban },
+    groups: {
+      natural: {
+        birds: Math.round(profile.brightness * natural),
+        waves: Math.round(profile.lowEnergy * natural),
+        wind: Math.round((1 - profile.pulseIntensity) * natural),
+        water: Math.round((profile.lowEnergy * 0.7 + (1 - profile.noiseLevel) * 0.3) * natural),
+        insects: Math.round(profile.brightness * (1 - profile.averageVolume) * natural)
+      },
+      human: {
+        conversation: Math.round(profile.noiseLevel * human),
+        footsteps: Math.round(profile.pulseIntensity * human),
+        crowds: Math.round(profile.averageVolume * human),
+        performers: Math.round(profile.brightness * human)
+      },
+      urban: {
+        traffic: Math.round(profile.noiseLevel * urban),
+        engines: Math.round(profile.lowEnergy * urban),
+        construction: Math.round(profile.dynamicRange * urban),
+        "public transport": Math.round(profile.pulseIntensity * urban)
+      }
+    },
+    characteristics: [
+      complexity > 62 ? "High ambient texture" : "Soft ambient texture",
+      profile.pulseIntensity > 0.58 ? "Strong rhythmic activity" : profile.pulseIntensity > 0.34 ? "Medium rhythmic activity" : "Low rhythmic activity",
+      frequencyRange > 58 ? "Wide frequency range" : "Narrow frequency range",
+      profile.calmBusy === "busy" ? "Busy atmosphere" : profile.calmBusy === "calm" ? "Calm atmosphere" : "Balanced atmosphere"
+    ],
+    acoustics: {
+      "average volume": Math.round(profile.averageVolume * 100),
+      "sound complexity": complexity,
+      "rhythm intensity": Math.round(profile.pulseIntensity * 100),
+      "frequency distribution": frequencyRange,
+      "dynamic range": Math.round(profile.dynamicRange * 100)
+    },
+    radar: [natural / 100, human / 100, urban / 100, complexity / 100, frequencyRange / 100]
   };
 }
 
@@ -805,14 +930,15 @@ function addBass(context, master, root, beat, duration, profile) {
   }
 }
 
-function addPercussion(context, master, beat, duration, profile) {
+function addPercussion(context, master, beat, duration, profile, soundDna) {
   const drumGain = context.createGain();
-  drumGain.gain.value = 0.20 + profile.averageVolume * 0.25;
+  drumGain.gain.value = 0.18 + profile.averageVolume * 0.20 + soundDna.scores.urban / 500;
   drumGain.connect(master);
-  for (let time = 0, step = 0; time < duration; time += beat / 2, step += 1) {
+  const subdivision = soundDna.scores.human > 28 ? beat / 4 : beat / 2;
+  for (let time = 0, step = 0; time < duration; time += subdivision, step += 1) {
     if (step % 4 === 0 && profile.averageVolume > 0.38) addKick(context, drumGain, time, profile);
     if (step % 4 === 2 && profile.pulseIntensity > 0.35) addSnare(context, drumGain, time, profile);
-    if (profile.brightness > 0.46 && (profile.calmBusy === "busy" || step % 2 === 0)) addHat(context, drumGain, time, profile);
+    if (profile.brightness > 0.46 && (profile.calmBusy === "busy" || step % 2 === 0 || soundDna.scores.urban > 55)) addHat(context, drumGain, time, profile);
   }
 }
 
@@ -866,8 +992,8 @@ function addHat(context, destination, time, profile) {
   oscillator.stop(time + 0.05);
 }
 
-function chooseBpm(profile) {
-  return Math.round(72 + profile.pulseIntensity * 42 + profile.noiseLevel * 18 + profile.averageVolume * 12);
+function chooseBpm(profile, soundDna) {
+  return Math.round(68 + profile.pulseIntensity * 34 + profile.noiseLevel * 12 + profile.averageVolume * 10 + soundDna.scores.urban * 0.24 + soundDna.scores.human * 0.10 - soundDna.scores.natural * 0.08);
 }
 
 function chooseMood(profile) {
@@ -884,13 +1010,13 @@ function chooseTitle(profile, source) {
   return profile.calmBusy === "calm" ? "Soft Horizon" : "City Light Loop";
 }
 
-function chooseInstruments(profile) {
+function chooseInstruments(profile, soundDna) {
   const instruments = [];
-  instruments.push(profile.averageVolume > 0.55 ? "strong drums" : "soft pads");
-  if (profile.brightness > 0.55) instruments.push("bells/plucks");
+  instruments.push(soundDna.scores.natural > 55 ? "soft pads" : profile.averageVolume > 0.55 ? "strong drums" : "warm keys");
+  if (profile.brightness > 0.55 || soundDna.groups.natural.birds > 20) instruments.push("bells/plucks");
   if (profile.lowEnergy > 0.44) instruments.push("bass line");
-  if (profile.pulseIntensity > 0.42) instruments.push("rhythmic percussion");
-  instruments.push(profile.natureUrban === "urban" ? "synth texture" : "ambient wave texture");
+  if (profile.pulseIntensity > 0.42 || soundDna.scores.human > 26) instruments.push("rhythmic percussion");
+  instruments.push(soundDna.scores.urban > 48 ? "city synth texture" : "ambient field texture");
   return instruments;
 }
 
