@@ -150,17 +150,17 @@ function Onboarding({ onStart, onExplore }) {
     <div className="onboarding">
       <div className="brand-pill">EnvioSound</div>
       <div className="hero-copy">
-        <p>AI-assisted sound analysis and procedural music generation</p>
-        <h1>Soundtrack your journey</h1>
-        <span>Generate music from places, waves, streets, parks, and real environmental sound.</span>
+        <p>Place-to-Music Generator</p>
+        <h1>Generate music from a place</h1>
+        <span>Record 15 seconds or choose a location profile.</span>
       </div>
       <div className="glass-panel">
         <div>
-          <strong>Place-to-Music Generator</strong>
-          <span>Record 15 seconds or use a location profile.</span>
+          <strong>Start with Galway</strong>
+          <span>Record, analyse, generate, preview.</span>
         </div>
-        <button onClick={onStart}>Get Started</button>
-        <button className="ghost" onClick={onExplore}>Explore Demo</button>
+        <button onClick={onStart}>Start</button>
+        <button className="ghost" onClick={onExplore}>Browse locations</button>
       </div>
     </div>
   );
@@ -176,7 +176,7 @@ function Home({ onChoose, notify }) {
       <header className="top-header">
         <div>
           <p>EnvioSound</p>
-          <h2>Where are you filming today?</h2>
+          <h2>Choose a location</h2>
         </div>
         <div className="avatar">TC</div>
       </header>
@@ -184,14 +184,10 @@ function Home({ onChoose, notify }) {
         <span>⌕</span>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a city, landmark, or vibe" />
       </label>
-      <div className="value-row">
-        <span>Generated from environmental sound features</span>
-        <span>Made for travel vlogs, reels and short films</span>
-      </div>
       <section>
         <div className="section-title">
-          <h3>Trending travel soundtracks</h3>
-          <small>Creator-safe loops</small>
+          <h3>Locations</h3>
+          <small>{visiblePlaces.length} available</small>
         </div>
         <div className="place-list">
           {visiblePlaces.map((place) => (
@@ -364,9 +360,9 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       <button className="return-button" onClick={onBack}>Return home</button>
       <header className="top-header compact">
         <div>
-          <p>Place-to-Music Generator</p>
-          <h2>AI-assisted sound analysis and procedural music generation</h2>
-          <span>Record your environment or use an average place profile, then generate a real playable loop.</span>
+          <p>Generator</p>
+          <h2>Create soundtrack</h2>
+          <span>Record 15 seconds or use the selected location profile.</span>
         </div>
       </header>
 
@@ -400,38 +396,14 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
         <div className="loading-card">
           <div className="spinner" />
           <span>{status === "recording" ? "Recording your environment..." : status === "analysing" ? "Building Sound DNA..." : "Creating your travel soundtrack..."}</span>
-          <small>Extracting natural sound, human activity, urban activity, rhythm, range and frequency shape.</small>
+          <small>Extracting sound features.</small>
         </div>
       )}
 
       {generatedTrack && (
         <GeneratedResult track={generatedTrack} place={place} onPreview={onPreview} sourceRef={sourceRef} notify={notify} />
       )}
-
-      <GeneratorImageGallery activePlace={place} />
     </div>
-  );
-}
-
-function GeneratorImageGallery({ activePlace }) {
-  const galleryPlaces = [activePlace, ...places.filter((place) => place.id !== activePlace.id)].slice(0, 9);
-
-  return (
-    <section className="generator-gallery">
-      <div className="section-title">
-        <h3>Sound profiles by place</h3>
-        <small>Visual mood board</small>
-      </div>
-      <div className="gallery-scroll">
-        {galleryPlaces.map((place) => (
-          <article className="gallery-card" key={place.id} style={{ backgroundImage: `url(${place.image})` }}>
-            <span>{place.vibe}</span>
-            <strong>{place.name}</strong>
-            <small>{place.sounds.slice(0, 3).join(" · ")}</small>
-          </article>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -442,7 +414,7 @@ function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
       <div className="result-card expanded">
         <div className="mini-cover" style={{ backgroundImage: `url(${place.image})` }} />
         <div className="result-copy">
-          <p>Generated from Sound DNA</p>
+          <p>Soundtrack</p>
           <h3>{track.title}</h3>
           <span>{track.source} · {track.mood}</span>
           <div className="profile-list">
@@ -509,7 +481,6 @@ function SoundDnaPanel({ soundDna, place, notify }) {
       <div className="dna-characteristics">
         {soundDna.characteristics.map((item) => <span key={item}>{item}</span>)}
       </div>
-      <p className="dna-explainer">Every place has a unique acoustic fingerprint. EnvioSound uses this Sound DNA to create music that reflects the environment.</p>
     </section>
   );
 }
@@ -598,9 +569,9 @@ function Artists({ onBack, notify }) {
       <button className="return-button" onClick={onBack}>Return home</button>
       <header className="top-header compact">
         <div>
-          <p>Support local artists</p>
-          <h2>Local sounds from local artists</h2>
-          <span>Artists can attach original songs to locations so vloggers can use local music with recognition.</span>
+          <p>Artists</p>
+          <h2>Local music</h2>
+          <span>Use location-linked tracks with credit.</span>
         </div>
       </header>
       <div className="artist-list">
