@@ -61,6 +61,7 @@ export function App() {
   const [location, setLocation] = useState("Galway");
   const [generatedTrack, setGeneratedTrack] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [plan, setPlan] = useState(() => localStorage.getItem("enviosound-plan") || "free");
   const [toast, setToast] = useState("");
 
   const currentPlace = useMemo(
@@ -83,6 +84,12 @@ export function App() {
     setToast(message);
     window.clearTimeout(notify.timer);
     notify.timer = window.setTimeout(() => setToast(""), 2400);
+  };
+
+  const choosePlan = (nextPlan) => {
+    setPlan(nextPlan);
+    localStorage.setItem("enviosound-plan", nextPlan);
+    notify(nextPlan === "pro" ? "EnvioSound Pro enabled" : "Free plan enabled");
   };
 
   return (
@@ -110,6 +117,8 @@ export function App() {
                   onPreview={() => setTab("preview")}
                   onBack={() => setTab("home")}
                   notify={notify}
+                  plan={plan}
+                  setPlan={choosePlan}
                 />
               )}
               {tab === "preview" && (
@@ -125,7 +134,7 @@ export function App() {
                 />
               )}
               {tab === "artists" && <Artists onBack={() => setTab("home")} notify={notify} />}
-              {tab === "saved" && (showProfile ? <Profile onBack={() => setShowProfile(false)} notify={notify} /> : <Saved onBack={() => setTab("home")} onProfile={() => setShowProfile(true)} notify={notify} />)}
+              {tab === "saved" && (showProfile ? <Profile onBack={() => setShowProfile(false)} notify={notify} plan={plan} setPlan={choosePlan} /> : <Saved onBack={() => setTab("home")} onProfile={() => setShowProfile(true)} notify={notify} />)}
             </div>
             {toast && <div className="toast">{toast}</div>}
             {tab !== "preview" && (
@@ -272,7 +281,7 @@ function MapScreen({ selected, onBack, onSelect, onCreate }) {
   );
 }
 
-function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview, onBack, notify }) {
+function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview, onBack, notify, plan, setPlan }) {
   const [mode, setMode] = useState("location");
   const [status, setStatus] = useState("idle");
   const [countdown, setCountdown] = useState(15);
@@ -293,12 +302,12 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       const profile = locationProfiles[location] || locationProfiles.Galway;
       const soundDna = createSoundDna(profile, location);
       setStatus("generating");
-      const track = await createElevenLabsTrack(profile, `selected location: ${location}`, null, soundDna, location);
+      const track = plan === "pro" ? await createElevenLabsTrack(profile, `selected location: ${location}`, null, soundDna, location) : await createLocalTrack(profile, `selected location: ${location}`, null, soundDna);
       setGeneratedTrack(track);
       setStatus("ready");
     } catch (generateError) {
       setStatus("idle");
-      setError(generateError.message || "ElevenLabs music generation failed.");
+      setError(generateError.message || "Music generation failed.");
     }
   };
 
@@ -338,12 +347,12 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
           const profile = analyseAudioBuffer(audioBuffer);
           const soundDna = createSoundDna(profile, "Recorded environment");
           setStatus("generating");
-          const track = await createElevenLabsTrack(profile, "recorded 15-second environment", blob, soundDna, location);
+          const track = plan === "pro" ? await createElevenLabsTrack(profile, "recorded 15-second environment", blob, soundDna, location) : await createLocalTrack(profile, "recorded 15-second environment", blob, soundDna);
           setGeneratedTrack(track);
           setStatus("ready");
         } catch (generateError) {
           setStatus("idle");
-          setError(generateError.message || "ElevenLabs music generation failed.");
+          setError(generateError.message || "Music generation failed.");
         }
       };
 
@@ -382,6 +391,8 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
 
       <SelectRow label="Location" value={location} setValue={setLocation} options={Object.keys(locationProfiles)} />
 
+      <PlanCard plan={plan} setPlan={setPlan} />
+
       <section className="record-card">
         <div>
           <h3>{mode === "recording" ? "Record exactly 15 seconds" : "Use average sound profile"}</h3>
@@ -404,7 +415,7 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       {status !== "idle" && status !== "ready" && (
         <div className="loading-card">
           <div className="spinner" />
-          <span>{status === "recording" ? "Recording your environment..." : status === "analysing" ? "Building Sound DNA..." : "Generating with ElevenLabs..."}</span>
+          <span>{status === "recording" ? "Recording your environment..." : status === "analysing" ? "Building Sound DNA..." : plan === "pro" ? "Generating with ElevenLabs..." : "Generating with local model..."}</span>
           <small>Extracting sound features.</small>
         </div>
       )}
@@ -432,7 +443,7 @@ function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
           <div className="meta-grid">
             <small>BPM <b>{track.bpm}</b></small>
             <small>Instruments <b>{track.instruments.join(", ")}</b></small>
-            <small>License <b>Creator-safe original loop</b></small>
+            <small>Engine <b>{track.engine}</b></small>
           </div>
           <FeatureGrid features={track.features} />
           <div className="button-row">
@@ -530,6 +541,21 @@ function FeatureGrid({ features }) {
   );
 }
 
+function PlanCard({ plan, setPlan }) {
+  return (
+    <section className="plan-card">
+      <div>
+        <h3>{plan === "pro" ? "EnvioSound Pro" : "Free plan"}</h3>
+        <p>{plan === "pro" ? "Uses ElevenLabs Music API for studio AI tracks." : "Uses the local Sound DNA model. No API cost."}</p>
+      </div>
+      <div className="plan-actions">
+        <button className={plan === "free" ? "selected" : ""} onClick={() => setPlan("free")}>Free</button>
+        <button className={plan === "pro" ? "selected" : ""} onClick={() => setPlan("pro")}>Pro $6/mo</button>
+      </div>
+    </section>
+  );
+}
+
 function SelectRow({ label, value, setValue, options }) {
   return (
     <label className="select-row">
@@ -561,7 +587,7 @@ function Preview({ track, place, onBack, onUse, notify }) {
       </div>
       <button className="play-button" onClick={() => { playTrack(safeTrack, sourceRef); notify("Playing generated music"); }}>Play generated music</button>
       <div className="chips large">
-        {[safeTrack.mood, safeTrack.source, "creator-safe", "ElevenLabs"].map((tag) => <small key={tag}>{tag}</small>)}
+        {[safeTrack.mood, safeTrack.source, "creator-safe", safeTrack.engine || "Local model"].map((tag) => <small key={tag}>{tag}</small>)}
       </div>
       <FeatureGrid features={safeTrack.features} />
       <a className="primary-action download-link" href={safeTrack.audioUrl} onClick={() => notify("Exporting video-ready audio")} download={safeTrack.downloadName || `${safeTrack.title.replaceAll(" ", "-").toLowerCase()}.mp3`}>Export for video</a>
@@ -664,7 +690,7 @@ function Saved({ onBack, onProfile, notify }) {
   );
 }
 
-function Profile({ onBack, notify }) {
+function Profile({ onBack, notify, plan, setPlan }) {
   return (
     <div className="stack">
       <button className="back-link dark-text" onClick={onBack}>Back</button>
@@ -673,6 +699,7 @@ function Profile({ onBack, notify }) {
         <h2>Travel Creator</h2>
         <p>Creator profile</p>
       </section>
+      <PlanCard plan={plan} setPlan={setPlan} />
       {[
         ["Saved tracks", "18"],
         ["Export history", "7 video exports"],
@@ -720,8 +747,59 @@ async function createElevenLabsTrack(profile, source, recordingBlob = null, soun
     audioUrl,
     songId: data.songId,
     prompt: data.prompt,
+    engine: "ElevenLabs",
     downloadName: `${title.replaceAll(" ", "-").toLowerCase()}.${audioBlob.type.includes("wav") ? "wav" : "mp3"}`,
     waveform,
+    features: {
+      "Average volume": profile.averageVolume,
+      "Dynamic range": profile.dynamicRange,
+      Brightness: profile.brightness,
+      "Low energy": profile.lowEnergy,
+      Noise: profile.noiseLevel,
+      Pulse: profile.pulseIntensity,
+      "Calm/busy": profile.calmBusy,
+      "Nature/urban": profile.natureUrban
+    }
+  };
+}
+
+async function createLocalTrack(profile, source, recordingBlob = null, soundDna = createSoundDna(profile, source)) {
+  const bpm = chooseBpm(profile, soundDna);
+  const mood = chooseMood(profile);
+  const title = chooseTitle(profile, source);
+  const instruments = chooseInstruments(profile, soundDna);
+  const duration = profile.calmBusy === "busy" ? 18 : 22;
+  const context = new OfflineAudioContext(2, duration * 44100, 44100);
+  const master = context.createGain();
+  master.gain.value = 0.74;
+  master.connect(context.destination);
+  const beat = 60 / bpm;
+  const root = profile.natureUrban === "urban" ? 146.83 : 130.81;
+
+  addLocalTexture(context, master, profile, duration);
+  addLocalChords(context, master, root, beat, duration, profile);
+  addLocalMelody(context, master, root, beat, duration, profile);
+  addLocalBass(context, master, root, beat, duration, profile);
+  addLocalPercussion(context, master, beat, duration, profile, soundDna);
+
+  const buffer = await context.startRendering();
+  const audioBlob = encodeWav(buffer);
+  const audioUrl = URL.createObjectURL(audioBlob);
+
+  return {
+    title,
+    source,
+    recordingBlob,
+    mood,
+    bpm,
+    instruments,
+    profile,
+    soundDna,
+    audioBlob,
+    audioUrl,
+    engine: "Local model",
+    downloadName: `${title.replaceAll(" ", "-").toLowerCase()}.wav`,
+    waveform: extractWaveform(buffer),
     features: {
       "Average volume": profile.averageVolume,
       "Dynamic range": profile.dynamicRange,
@@ -846,6 +924,111 @@ function detectSoundHints(profile) {
   return hints.slice(0, 4);
 }
 
+function addLocalTexture(context, master, profile, duration) {
+  const gain = context.createGain();
+  gain.gain.value = profile.averageVolume < 0.45 ? 0.16 : 0.09;
+  gain.connect(master);
+  for (let time = 0; time < duration; time += 0.28) {
+    addLocalNote(context, gain, profile.natureUrban === "nature" ? 196 + Math.sin(time) * 18 : 164 + Math.sin(time * 0.6) * 16, time, 0.42, "sine", 0.05);
+  }
+}
+
+function addLocalChords(context, master, root, beat, duration, profile) {
+  const gain = context.createGain();
+  gain.gain.value = profile.averageVolume < 0.55 ? 0.15 : 0.10;
+  gain.connect(master);
+  const chords = [[0, 3, 7], [5, 8, 12], [7, 10, 14], [3, 7, 10]];
+  for (let time = 0, index = 0; time < duration; time += beat * 4, index += 1) {
+    chords[index % chords.length].forEach((semi) => addLocalNote(context, gain, root * Math.pow(2, semi / 12), time, beat * 3.8, "triangle", 0.10));
+  }
+}
+
+function addLocalMelody(context, master, root, beat, duration, profile) {
+  const gain = context.createGain();
+  gain.gain.value = profile.brightness > 0.62 ? 0.17 : 0.11;
+  gain.connect(master);
+  const scale = profile.brightness > 0.62 ? [0, 2, 4, 7, 9, 12] : [0, 3, 5, 7, 10, 12];
+  const interval = profile.pulseIntensity > 0.55 ? beat / 2 : beat;
+  for (let time = beat, step = 0; time < duration; time += interval, step += 1) {
+    if (step % 4 === 3 && profile.calmBusy === "calm") continue;
+    addLocalNote(context, gain, root * Math.pow(2, (scale[(step * 2 + Math.round(profile.brightness * 5)) % scale.length] + 12) / 12), time, interval * 0.65, profile.brightness > 0.62 ? "sine" : "triangle", 0.15);
+  }
+}
+
+function addLocalBass(context, master, root, beat, duration, profile) {
+  if (profile.lowEnergy < 0.35 && profile.natureUrban !== "urban") return;
+  const gain = context.createGain();
+  gain.gain.value = 0.18 + profile.lowEnergy * 0.14;
+  gain.connect(master);
+  const pattern = profile.natureUrban === "urban" ? [0, 0, 7, 5] : [0, 0, 5, 3];
+  for (let time = 0, step = 0; time < duration; time += beat, step += 1) {
+    if (profile.calmBusy === "calm" && step % 2) continue;
+    addLocalNote(context, gain, (root / 2) * Math.pow(2, pattern[step % pattern.length] / 12), time, beat * 0.72, "sawtooth", 0.13);
+  }
+}
+
+function addLocalPercussion(context, master, beat, duration, profile, soundDna) {
+  const gain = context.createGain();
+  gain.gain.value = 0.18 + profile.averageVolume * 0.18 + soundDna.scores.urban / 600;
+  gain.connect(master);
+  const subdivision = soundDna.scores.human > 28 ? beat / 4 : beat / 2;
+  for (let time = 0, step = 0; time < duration; time += subdivision, step += 1) {
+    if (step % 4 === 0 && profile.averageVolume > 0.38) addLocalKick(context, gain, time, profile);
+    if (step % 4 === 2 && profile.pulseIntensity > 0.35) addLocalNoiseHit(context, gain, time, 0.16, 0.10 + profile.noiseLevel * 0.14);
+    if (profile.brightness > 0.46 && (profile.calmBusy === "busy" || step % 2 === 0 || soundDna.scores.urban > 55)) addLocalHat(context, gain, time, profile);
+  }
+}
+
+function addLocalNote(context, destination, frequency, start, duration, type, volume) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, start + Math.max(0.05, duration));
+  oscillator.connect(gain).connect(destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.05);
+}
+
+function addLocalKick(context, destination, time, profile) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(110 + profile.lowEnergy * 45, time);
+  oscillator.frequency.exponentialRampToValueAtTime(42, time + 0.16);
+  gain.gain.setValueAtTime(0.24 + profile.averageVolume * 0.20, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
+  oscillator.connect(gain).connect(destination);
+  oscillator.start(time);
+  oscillator.stop(time + 0.24);
+}
+
+function addLocalNoiseHit(context, destination, time, duration, volume) {
+  const buffer = context.createBuffer(1, context.sampleRate * duration, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const source = context.createBufferSource();
+  const gain = context.createGain();
+  source.buffer = buffer;
+  gain.gain.value = volume;
+  source.connect(gain).connect(destination);
+  source.start(time);
+}
+
+function addLocalHat(context, destination, time, profile) {
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = "square";
+  oscillator.frequency.value = 6500 + profile.brightness * 1800;
+  gain.gain.setValueAtTime(0.035 + profile.brightness * 0.04, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.045);
+  oscillator.connect(gain).connect(destination);
+  oscillator.start(time);
+  oscillator.stop(time + 0.05);
+}
+
 function chooseBpm(profile, soundDna) {
   return Math.round(68 + profile.pulseIntensity * 34 + profile.noiseLevel * 12 + profile.averageVolume * 10 + soundDna.scores.urban * 0.24 + soundDna.scores.human * 0.10 - soundDna.scores.natural * 0.08);
 }
@@ -918,7 +1101,7 @@ function saveArtistCredit(artist) {
 
 function createFallbackTrack(place) {
   const profile = locationProfiles[place.name] || locationProfiles.Galway;
-  return { title: place.reco, source: place.name, mood: chooseMood(profile), waveform: fallbackWaveform(profile), features: { "Average volume": profile.averageVolume, Brightness: profile.brightness, Pulse: profile.pulseIntensity }, audioUrl: "" };
+  return { title: place.reco, source: place.name, mood: chooseMood(profile), waveform: fallbackWaveform(profile), features: { "Average volume": profile.averageVolume, Brightness: profile.brightness, Pulse: profile.pulseIntensity }, audioUrl: "", engine: "Local model" };
 }
 
 function monitorInputBars(analyser, setBars, rafRef) {
@@ -955,6 +1138,43 @@ async function extractAudioWaveform(blob, profile) {
   } catch {
     return fallbackWaveform(profile);
   }
+}
+
+function encodeWav(buffer) {
+  const numberOfChannels = buffer.numberOfChannels;
+  const length = buffer.length * numberOfChannels * 2 + 44;
+  const arrayBuffer = new ArrayBuffer(length);
+  const view = new DataView(arrayBuffer);
+  const channels = Array.from({ length: numberOfChannels }, (_, index) => buffer.getChannelData(index));
+  let offset = 0;
+
+  writeString(view, offset, "RIFF"); offset += 4;
+  view.setUint32(offset, length - 8, true); offset += 4;
+  writeString(view, offset, "WAVE"); offset += 4;
+  writeString(view, offset, "fmt "); offset += 4;
+  view.setUint32(offset, 16, true); offset += 4;
+  view.setUint16(offset, 1, true); offset += 2;
+  view.setUint16(offset, numberOfChannels, true); offset += 2;
+  view.setUint32(offset, buffer.sampleRate, true); offset += 4;
+  view.setUint32(offset, buffer.sampleRate * numberOfChannels * 2, true); offset += 4;
+  view.setUint16(offset, numberOfChannels * 2, true); offset += 2;
+  view.setUint16(offset, 16, true); offset += 2;
+  writeString(view, offset, "data"); offset += 4;
+  view.setUint32(offset, length - offset - 4, true); offset += 4;
+
+  for (let i = 0; i < buffer.length; i += 1) {
+    for (let channel = 0; channel < numberOfChannels; channel += 1) {
+      const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([view], { type: "audio/wav" });
+}
+
+function writeString(view, offset, string) {
+  for (let i = 0; i < string.length; i += 1) view.setUint8(offset + i, string.charCodeAt(i));
 }
 
 function extractWaveform(buffer) {

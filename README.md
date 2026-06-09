@@ -4,13 +4,14 @@ A polished mobile prototype for travel vlog soundtrack discovery and generation.
 
 ## Place-to-Music Generator
 
-The shared React/Capacitor app analyses locations or 15-second environmental recordings, builds a Sound DNA profile, then sends those features to ElevenLabs Music through a local API proxy.
+The shared React/Capacitor app analyses locations or 15-second environmental recordings, builds a Sound DNA profile, then generates music based on the active plan.
 
 - Records exactly 15 seconds of environmental audio with microphone permission
 - Shows live input bars and a countdown while recording
 - Analyses average volume, dynamic range, brightness, low-frequency energy, noise, pulse intensity, calm/busy, and nature/urban classification
-- Sends the location, mood, Sound DNA, BPM, instruments, and detected sound profile to ElevenLabs
-- Plays and exports the generated audio returned by ElevenLabs
+- Free plan uses the local Sound DNA music model with no API call
+- Pro plan is shown at $6/month and sends the location, mood, Sound DNA, BPM, instruments, and detected sound profile to ElevenLabs
+- Plays and exports the generated audio
 - Supports location average profiles when the user does not record
 
 Create a local `.env` file before running generation:
