@@ -288,14 +288,18 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
     setMode("location");
     setError("");
     setStatus("analysing");
-    await wait(320);
-    const profile = locationProfiles[location] || locationProfiles.Galway;
-    const soundDna = createSoundDna(profile, location);
-    setStatus("generating");
-    await wait(320);
-    const track = await createProceduralTrack(profile, `selected location: ${location}`, null, soundDna);
-    setGeneratedTrack(track);
-    setStatus("ready");
+    try {
+      await wait(320);
+      const profile = locationProfiles[location] || locationProfiles.Galway;
+      const soundDna = createSoundDna(profile, location);
+      setStatus("generating");
+      const track = await createElevenLabsTrack(profile, `selected location: ${location}`, null, soundDna, location);
+      setGeneratedTrack(track);
+      setStatus("ready");
+    } catch (generateError) {
+      setStatus("idle");
+      setError(generateError.message || "ElevenLabs music generation failed.");
+    }
   };
 
   const startRecording = async () => {
@@ -323,19 +327,24 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
         if (event.data.size) chunks.push(event.data);
       };
       recorder.onstop = async () => {
-        stopInput(streamRef, audioContextRef, rafRef);
-        setStatus("analysing");
-        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-        const arrayBuffer = await blob.arrayBuffer();
-        const decodeContext = new AudioContext();
-        const audioBuffer = await decodeContext.decodeAudioData(arrayBuffer.slice(0));
-        await decodeContext.close();
-        const profile = analyseAudioBuffer(audioBuffer);
-        const soundDna = createSoundDna(profile, "Recorded environment");
-        setStatus("generating");
-        const track = await createProceduralTrack(profile, "recorded 15-second environment", blob, soundDna);
-        setGeneratedTrack(track);
-        setStatus("ready");
+        try {
+          stopInput(streamRef, audioContextRef, rafRef);
+          setStatus("analysing");
+          const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+          const arrayBuffer = await blob.arrayBuffer();
+          const decodeContext = new AudioContext();
+          const audioBuffer = await decodeContext.decodeAudioData(arrayBuffer.slice(0));
+          await decodeContext.close();
+          const profile = analyseAudioBuffer(audioBuffer);
+          const soundDna = createSoundDna(profile, "Recorded environment");
+          setStatus("generating");
+          const track = await createElevenLabsTrack(profile, "recorded 15-second environment", blob, soundDna, location);
+          setGeneratedTrack(track);
+          setStatus("ready");
+        } catch (generateError) {
+          setStatus("idle");
+          setError(generateError.message || "ElevenLabs music generation failed.");
+        }
       };
 
       recorder.start();
@@ -395,7 +404,7 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       {status !== "idle" && status !== "ready" && (
         <div className="loading-card">
           <div className="spinner" />
-          <span>{status === "recording" ? "Recording your environment..." : status === "analysing" ? "Building Sound DNA..." : "Creating your travel soundtrack..."}</span>
+          <span>{status === "recording" ? "Recording your environment..." : status === "analysing" ? "Building Sound DNA..." : "Generating with ElevenLabs..."}</span>
           <small>Extracting sound features.</small>
         </div>
       )}
@@ -427,9 +436,9 @@ function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
           </div>
           <FeatureGrid features={track.features} />
           <div className="button-row">
-            <button onClick={() => { playTrack(track, sourceRef); notify("Playing generated loop"); }}>Play</button>
+            <button onClick={() => { playTrack(track, sourceRef); notify("Playing ElevenLabs track"); }}>Play</button>
             <button onClick={() => { saveTrack(track); notify("Saved to projects"); }}>Save</button>
-            <a className="download-button" href={track.wavUrl} onClick={() => notify("Exporting WAV loop")} download={`${track.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export</a>
+            <a className="download-button" href={track.audioUrl} onClick={() => notify("Exporting generated track")} download={track.downloadName}>Export</a>
             <button className="dark" onClick={onPreview}>Preview</button>
           </div>
         </div>
@@ -552,10 +561,10 @@ function Preview({ track, place, onBack, onUse, notify }) {
       </div>
       <button className="play-button" onClick={() => { playTrack(safeTrack, sourceRef); notify("Playing generated music"); }}>Play generated music</button>
       <div className="chips large">
-        {[safeTrack.mood, safeTrack.source, "creator-safe", "procedural"].map((tag) => <small key={tag}>{tag}</small>)}
+        {[safeTrack.mood, safeTrack.source, "creator-safe", "ElevenLabs"].map((tag) => <small key={tag}>{tag}</small>)}
       </div>
       <FeatureGrid features={safeTrack.features} />
-      <a className="primary-action download-link" href={safeTrack.wavUrl} onClick={() => notify("Exporting video-ready WAV")} download={`${safeTrack.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export for video</a>
+      <a className="primary-action download-link" href={safeTrack.audioUrl} onClick={() => notify("Exporting video-ready audio")} download={safeTrack.downloadName || `${safeTrack.title.replaceAll(" ", "-").toLowerCase()}.mp3`}>Export for video</a>
       <button className="secondary-action" onClick={() => { navigator.clipboard?.writeText(`${safeTrack.title} - generated with EnvioSound from environmental sound features.`); notify("Credit copied"); }}>Copy credit</button>
     </div>
   );
@@ -679,33 +688,23 @@ function Profile({ onBack, notify }) {
   );
 }
 
-async function createProceduralTrack(profile, source, recordingBlob = null, soundDna = createSoundDna(profile, source)) {
+async function createElevenLabsTrack(profile, source, recordingBlob = null, soundDna = createSoundDna(profile, source), location = source) {
   const bpm = chooseBpm(profile, soundDna);
   const mood = chooseMood(profile);
   const title = chooseTitle(profile, source);
   const instruments = chooseInstruments(profile, soundDna);
-  const duration = profile.calmBusy === "busy" ? 18 : 22;
-  const sampleRate = 44100;
-  const context = new OfflineAudioContext(2, duration * sampleRate, sampleRate);
-  const master = context.createGain();
-  master.gain.value = 0.74;
-  master.connect(context.destination);
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/generate-music`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ profile, soundDna, source, location, mood, bpm, instruments, durationMs: profile.calmBusy === "busy" ? 18000 : 22000 })
+  });
 
-  const beat = 60 / bpm;
-  const scale = profile.brightness > 0.62 ? [0, 2, 4, 7, 9, 12] : [0, 3, 5, 7, 10, 12];
-  const root = profile.natureUrban === "urban" ? 146.83 : 130.81;
-  const chords = [[0, 3, 7], [5, 8, 12], [7, 10, 14], [3, 7, 10]];
+  const data = await response.json();
+  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "ElevenLabs music generation failed.");
 
-  addAmbientTexture(context, master, profile, duration);
-  addChordProgression(context, master, root, chords, beat, duration, profile);
-  addMelody(context, master, root, scale, beat, duration, profile);
-  addBass(context, master, root, beat, duration, profile);
-  addPercussion(context, master, beat, duration, profile, soundDna);
-
-  const buffer = await context.startRendering();
-  const wavBlob = encodeWav(buffer);
-  const wavUrl = URL.createObjectURL(wavBlob);
-  const waveform = extractWaveform(buffer);
+  const audioBlob = base64ToBlob(data.audioBase64, data.mimeType || "audio/mpeg");
+  const audioUrl = URL.createObjectURL(audioBlob);
+  const waveform = await extractAudioWaveform(audioBlob, profile);
 
   return {
     title,
@@ -716,9 +715,11 @@ async function createProceduralTrack(profile, source, recordingBlob = null, soun
     instruments,
     profile,
     soundDna,
-    buffer,
-    wavBlob,
-    wavUrl,
+    audioBlob,
+    audioUrl,
+    songId: data.songId,
+    prompt: data.prompt,
+    downloadName: `${title.replaceAll(" ", "-").toLowerCase()}.${audioBlob.type.includes("wav") ? "wav" : "mp3"}`,
     waveform,
     features: {
       "Average volume": profile.averageVolume,
@@ -844,125 +845,6 @@ function detectSoundHints(profile) {
   return hints.slice(0, 4);
 }
 
-function addAmbientTexture(context, master, profile, duration) {
-  const gain = context.createGain();
-  gain.gain.value = profile.averageVolume < 0.45 ? 0.18 : 0.10;
-  gain.connect(master);
-  for (let i = 0; i < duration; i += 0.25) {
-    const oscillator = context.createOscillator();
-    const toneGain = context.createGain();
-    oscillator.type = "sine";
-    oscillator.frequency.value = profile.natureUrban === "nature" ? 220 + Math.sin(i) * 24 : 174 + Math.sin(i * 0.7) * 18;
-    toneGain.gain.setValueAtTime(0, i);
-    toneGain.gain.linearRampToValueAtTime(0.05, i + 0.08);
-    toneGain.gain.linearRampToValueAtTime(0, i + 0.45);
-    oscillator.connect(toneGain).connect(gain);
-    oscillator.start(i);
-    oscillator.stop(i + 0.5);
-  }
-}
-
-function addChordProgression(context, master, root, chords, beat, duration, profile) {
-  const chordGain = context.createGain();
-  chordGain.gain.value = profile.averageVolume < 0.55 ? 0.16 : 0.11;
-  chordGain.connect(master);
-  const chordLength = beat * 4;
-  for (let time = 0, index = 0; time < duration; time += chordLength, index += 1) {
-    chords[index % chords.length].forEach((semi) => {
-      addNote(context, chordGain, root * Math.pow(2, semi / 12), time, chordLength * 0.95, "triangle", 0.10);
-    });
-  }
-}
-
-function addMelody(context, master, root, scale, beat, duration, profile) {
-  const melodyGain = context.createGain();
-  melodyGain.gain.value = profile.brightness > 0.62 ? 0.18 : 0.12;
-  melodyGain.connect(master);
-  const interval = profile.pulseIntensity > 0.55 ? beat / 2 : beat;
-  for (let time = beat, step = 0; time < duration; time += interval, step += 1) {
-    if (step % 4 === 3 && profile.calmBusy === "calm") continue;
-    const semi = scale[(step * 2 + Math.round(profile.brightness * 5)) % scale.length] + 12;
-    addNote(context, melodyGain, root * Math.pow(2, semi / 12), time, interval * 0.65, profile.brightness > 0.62 ? "sine" : "triangle", 0.16);
-    if (profile.brightness > 0.72 && step % 6 === 0) {
-      addNote(context, melodyGain, root * Math.pow(2, (semi + 7) / 12), time + interval * 0.32, interval * 0.35, "sine", 0.10);
-    }
-  }
-}
-
-function addBass(context, master, root, beat, duration, profile) {
-  if (profile.lowEnergy < 0.35 && profile.natureUrban !== "urban") return;
-  const bassGain = context.createGain();
-  bassGain.gain.value = 0.18 + profile.lowEnergy * 0.16;
-  bassGain.connect(master);
-  const pattern = profile.natureUrban === "urban" ? [0, 0, 7, 5] : [0, 0, 5, 3];
-  for (let time = 0, step = 0; time < duration; time += beat, step += 1) {
-    if (profile.calmBusy === "calm" && step % 2) continue;
-    addNote(context, bassGain, (root / 2) * Math.pow(2, pattern[step % pattern.length] / 12), time, beat * 0.72, "sawtooth", 0.13);
-  }
-}
-
-function addPercussion(context, master, beat, duration, profile, soundDna) {
-  const drumGain = context.createGain();
-  drumGain.gain.value = 0.18 + profile.averageVolume * 0.20 + soundDna.scores.urban / 500;
-  drumGain.connect(master);
-  const subdivision = soundDna.scores.human > 28 ? beat / 4 : beat / 2;
-  for (let time = 0, step = 0; time < duration; time += subdivision, step += 1) {
-    if (step % 4 === 0 && profile.averageVolume > 0.38) addKick(context, drumGain, time, profile);
-    if (step % 4 === 2 && profile.pulseIntensity > 0.35) addSnare(context, drumGain, time, profile);
-    if (profile.brightness > 0.46 && (profile.calmBusy === "busy" || step % 2 === 0 || soundDna.scores.urban > 55)) addHat(context, drumGain, time, profile);
-  }
-}
-
-function addNote(context, destination, frequency, start, duration, type, volume) {
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = type;
-  oscillator.frequency.value = frequency;
-  gain.gain.setValueAtTime(0, start);
-  gain.gain.linearRampToValueAtTime(volume, start + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, start + Math.max(0.05, duration));
-  oscillator.connect(gain).connect(destination);
-  oscillator.start(start);
-  oscillator.stop(start + duration + 0.05);
-}
-
-function addKick(context, destination, time, profile) {
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(110 + profile.lowEnergy * 45, time);
-  oscillator.frequency.exponentialRampToValueAtTime(42, time + 0.16);
-  gain.gain.setValueAtTime(0.24 + profile.averageVolume * 0.22, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
-  oscillator.connect(gain).connect(destination);
-  oscillator.start(time);
-  oscillator.stop(time + 0.24);
-}
-
-function addSnare(context, destination, time, profile) {
-  const buffer = context.createBuffer(1, context.sampleRate * 0.16, context.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-  const source = context.createBufferSource();
-  const gain = context.createGain();
-  source.buffer = buffer;
-  gain.gain.value = 0.10 + profile.noiseLevel * 0.15;
-  source.connect(gain).connect(destination);
-  source.start(time);
-}
-
-function addHat(context, destination, time, profile) {
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  oscillator.type = "square";
-  oscillator.frequency.value = 6500 + profile.brightness * 1800;
-  gain.gain.setValueAtTime(0.035 + profile.brightness * 0.045, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.045);
-  oscillator.connect(gain).connect(destination);
-  oscillator.start(time);
-  oscillator.stop(time + 0.05);
-}
-
 function chooseBpm(profile, soundDna) {
   return Math.round(68 + profile.pulseIntensity * 34 + profile.noiseLevel * 12 + profile.averageVolume * 10 + soundDna.scores.urban * 0.24 + soundDna.scores.human * 0.10 - soundDna.scores.natural * 0.08);
 }
@@ -992,14 +874,11 @@ function chooseInstruments(profile, soundDna) {
 }
 
 function playTrack(track, sourceRef) {
-  if (!track?.buffer) return;
-  const context = new AudioContext();
-  if (sourceRef.current) sourceRef.current.stop();
-  const source = context.createBufferSource();
-  source.buffer = track.buffer;
-  source.connect(context.destination);
-  source.start();
-  sourceRef.current = source;
+  if (!track?.audioUrl) return;
+  sourceRef.current?.pause?.();
+  const audio = new Audio(track.audioUrl);
+  audio.play();
+  sourceRef.current = audio;
 }
 
 function saveTrack(track) {
@@ -1038,7 +917,7 @@ function saveArtistCredit(artist) {
 
 function createFallbackTrack(place) {
   const profile = locationProfiles[place.name] || locationProfiles.Galway;
-  return { title: place.reco, source: place.name, mood: chooseMood(profile), waveform: Array.from({ length: 34 }, (_, index) => 18 + ((index * 13) % 52)), features: { "Average volume": profile.averageVolume, Brightness: profile.brightness, Pulse: profile.pulseIntensity }, wavUrl: "#", buffer: null };
+  return { title: place.reco, source: place.name, mood: chooseMood(profile), waveform: fallbackWaveform(profile), features: { "Average volume": profile.averageVolume, Brightness: profile.brightness, Pulse: profile.pulseIntensity }, audioUrl: "" };
 }
 
 function monitorInputBars(analyser, setBars, rafRef) {
@@ -1065,41 +944,16 @@ function stopInput(streamRef, audioContextRef, rafRef) {
   audioContextRef.current = null;
 }
 
-function encodeWav(buffer) {
-  const numberOfChannels = buffer.numberOfChannels;
-  const length = buffer.length * numberOfChannels * 2 + 44;
-  const arrayBuffer = new ArrayBuffer(length);
-  const view = new DataView(arrayBuffer);
-  const channels = Array.from({ length: numberOfChannels }, (_, index) => buffer.getChannelData(index));
-  let offset = 0;
-
-  writeString(view, offset, "RIFF"); offset += 4;
-  view.setUint32(offset, length - 8, true); offset += 4;
-  writeString(view, offset, "WAVE"); offset += 4;
-  writeString(view, offset, "fmt "); offset += 4;
-  view.setUint32(offset, 16, true); offset += 4;
-  view.setUint16(offset, 1, true); offset += 2;
-  view.setUint16(offset, numberOfChannels, true); offset += 2;
-  view.setUint32(offset, buffer.sampleRate, true); offset += 4;
-  view.setUint32(offset, buffer.sampleRate * numberOfChannels * 2, true); offset += 4;
-  view.setUint16(offset, numberOfChannels * 2, true); offset += 2;
-  view.setUint16(offset, 16, true); offset += 2;
-  writeString(view, offset, "data"); offset += 4;
-  view.setUint32(offset, length - offset - 4, true); offset += 4;
-
-  for (let i = 0; i < buffer.length; i += 1) {
-    for (let channel = 0; channel < numberOfChannels; channel += 1) {
-      const sample = Math.max(-1, Math.min(1, channels[channel][i]));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
-      offset += 2;
-    }
+async function extractAudioWaveform(blob, profile) {
+  try {
+    const context = new AudioContext();
+    const buffer = await context.decodeAudioData(await blob.arrayBuffer());
+    const waveform = extractWaveform(buffer);
+    await context.close();
+    return waveform;
+  } catch {
+    return fallbackWaveform(profile);
   }
-
-  return new Blob([view], { type: "audio/wav" });
-}
-
-function writeString(view, offset, string) {
-  for (let i = 0; i < string.length; i += 1) view.setUint8(offset + i, string.charCodeAt(i));
 }
 
 function extractWaveform(buffer) {
@@ -1111,6 +965,17 @@ function extractWaveform(buffer) {
     for (let i = index * block; i < (index + 1) * block; i += 1) peak = Math.max(peak, Math.abs(data[i] || 0));
     return 18 + clamp(peak * 4) * 72;
   });
+}
+
+function fallbackWaveform(profile) {
+  return Array.from({ length: 34 }, (_, index) => 18 + clamp(profile.averageVolume + Math.sin(index * profile.pulseIntensity * 3) * 0.28 + ((index * 13) % 17) / 50) * 62);
+}
+
+function base64ToBlob(base64, type) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type });
 }
 
 function wait(ms) {
