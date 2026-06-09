@@ -5,7 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/api": "http://localhost:8787"
+      "/api": {
+        target: `http://localhost:${process.env.REALTIME_SERVER_PORT || 8787}`,
+        changeOrigin: true
+      }
     }
   }
 });
