@@ -49,9 +49,19 @@ const projects = [
 const tabs = [
   { id: "home", label: "Home", icon: "⌂" },
   { id: "map", label: "Map", icon: "⌖" },
-  { id: "generate", label: "Generate", icon: "✦" },
+  { id: "generate", label: "Studio", icon: "✦" },
   { id: "artists", label: "Artists", icon: "♬" },
   { id: "saved", label: "Saved", icon: "▣" }
+];
+
+const vlogStyles = ["Travel Reel", "Travel TikTok", "Travel Short", "Travel Documentary", "Travel Montage"];
+
+const exportFormats = ["TikTok", "Instagram Reels", "YouTube Shorts", "YouTube Travel Vlog"];
+
+const narrationVoices = [
+  { name: "Rachel", accent: "Warm documentary", id: "21m00Tcm4TlvDq8ikWAM" },
+  { name: "Antoni", accent: "Calm creator", id: "ErXwobaYiN019PkySvjV" },
+  { name: "Bella", accent: "Cinematic travel", id: "EXAVITQu4vr4xnSDxMaL" }
 ];
 
 export function App() {
@@ -62,6 +72,9 @@ export function App() {
   const [generatedTrack, setGeneratedTrack] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [plan, setPlan] = useState(() => localStorage.getItem("enviosound-plan") || "free");
+  const [uploadedAssets, setUploadedAssets] = useState([]);
+  const [narration, setNarration] = useState(null);
+  const [vlogDraft, setVlogDraft] = useState(null);
   const [toast, setToast] = useState("");
 
   const currentPlace = useMemo(
@@ -119,6 +132,12 @@ export function App() {
                   notify={notify}
                   plan={plan}
                   setPlan={choosePlan}
+                  uploadedAssets={uploadedAssets}
+                  setUploadedAssets={setUploadedAssets}
+                  narration={narration}
+                  setNarration={setNarration}
+                  vlogDraft={vlogDraft}
+                  setVlogDraft={setVlogDraft}
                 />
               )}
               {tab === "preview" && (
@@ -159,14 +178,14 @@ function Onboarding({ onStart, onExplore }) {
     <div className="onboarding">
       <div className="brand-pill">EnvioSound</div>
       <div className="hero-copy">
-        <p>Place-to-Music Generator</p>
-        <h1>Generate music from a place</h1>
-        <span>Record 15 seconds or choose a location profile.</span>
+        <p>From Place to Story</p>
+        <h1>Turn places into stories.</h1>
+        <span>Generate music, narration and videos inspired by where you are.</span>
       </div>
       <div className="glass-panel">
         <div>
           <strong>Start with Galway</strong>
-          <span>Record, analyse, generate, preview.</span>
+          <span>Upload footage, analyse the place, assemble the vlog.</span>
         </div>
         <button onClick={onStart}>Start</button>
         <button className="ghost" onClick={onExplore}>Browse locations</button>
@@ -185,10 +204,15 @@ function Home({ onChoose, notify }) {
       <header className="top-header">
         <div>
           <p>EnvioSound</p>
-          <h2>Choose a location</h2>
+          <h2>Turn places into stories</h2>
         </div>
         <div className="avatar">TC</div>
       </header>
+      <section className="story-panel">
+        <strong>Travel vlog studio</strong>
+        <span>Upload clips, build Sound DNA, generate soundtrack and narration, then export a creator-ready video plan.</span>
+        <button onClick={() => onChoose(places[0], "generate")}>Open Studio</button>
+      </section>
       <label className="search">
         <span>⌕</span>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search a city, landmark, or vibe" />
@@ -207,7 +231,7 @@ function Home({ onChoose, notify }) {
               </div>
               <div className="card-footer">
                 <small>{place.tracks} profiles</small>
-                <button onClick={() => onChoose(place, "generate")}>Find soundtrack</button>
+                <button onClick={() => onChoose(place, "generate")}>Create story</button>
               </div>
             </article>
           ))}
@@ -281,17 +305,34 @@ function MapScreen({ selected, onBack, onSelect, onCreate }) {
   );
 }
 
-function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview, onBack, notify, plan, setPlan }) {
+function Generator({ location, setLocation, place, generatedTrack, setGeneratedTrack, onPreview, onBack, notify, plan, setPlan, uploadedAssets, setUploadedAssets, narration, setNarration, vlogDraft, setVlogDraft }) {
   const [mode, setMode] = useState("location");
   const [status, setStatus] = useState("idle");
   const [countdown, setCountdown] = useState(15);
   const [error, setError] = useState("");
   const [bars, setBars] = useState(Array.from({ length: 24 }, () => 10));
+  const [vlogStyle, setVlogStyle] = useState("Travel Reel");
+  const [notes, setNotes] = useState("");
+  const [voice, setVoice] = useState(narrationVoices[0]);
+  const [narrationStatus, setNarrationStatus] = useState("idle");
+  const [exportFormat, setExportFormat] = useState("Instagram Reels");
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const audioContextRef = useRef(null);
   const rafRef = useRef(null);
   const sourceRef = useRef(null);
+  const narrationRef = useRef(null);
+
+  const addUploads = (files) => {
+    const nextAssets = Array.from(files).map((file) => ({
+      id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+      name: file.name,
+      type: file.type.startsWith("video/") ? "Video" : file.type.startsWith("image/") ? "Photo" : file.type.startsWith("audio/") ? "Audio" : "File",
+      url: URL.createObjectURL(file)
+    }));
+    setUploadedAssets([...nextAssets, ...uploadedAssets].slice(0, 12));
+    notify(`${nextAssets.length} file${nextAssets.length === 1 ? "" : "s"} added`);
+  };
 
   const generateFromLocation = async () => {
     setMode("location");
@@ -302,7 +343,7 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       const profile = locationProfiles[location] || locationProfiles.Galway;
       const soundDna = createSoundDna(profile, location);
       setStatus("generating");
-      const track = plan === "pro" ? await createElevenLabsTrack(profile, `selected location: ${location}`, null, soundDna, location) : await createLocalTrack(profile, `selected location: ${location}`, null, soundDna);
+      const track = plan === "pro" ? await createElevenLabsTrack(profile, `selected location: ${location}`, null, soundDna, location, vlogStyle) : await createLocalTrack(profile, `selected location: ${location}`, null, soundDna);
       setGeneratedTrack(track);
       setStatus("ready");
     } catch (generateError) {
@@ -347,7 +388,7 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
           const profile = analyseAudioBuffer(audioBuffer);
           const soundDna = createSoundDna(profile, "Recorded environment");
           setStatus("generating");
-          const track = plan === "pro" ? await createElevenLabsTrack(profile, "recorded 15-second environment", blob, soundDna, location) : await createLocalTrack(profile, "recorded 15-second environment", blob, soundDna);
+          const track = plan === "pro" ? await createElevenLabsTrack(profile, "recorded 15-second environment", blob, soundDna, location, vlogStyle) : await createLocalTrack(profile, "recorded 15-second environment", blob, soundDna);
           setGeneratedTrack(track);
           setStatus("ready");
         } catch (generateError) {
@@ -373,23 +414,46 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
     }
   };
 
+  const generateNarration = async () => {
+    setNarrationStatus("generating");
+    try {
+      const text = createNarrationText(location, notes, vlogStyle);
+      const nextNarration = plan === "pro" ? await createElevenLabsNarration(text, voice) : createLocalNarration(text, voice);
+      setNarration(nextNarration);
+      setNarrationStatus("ready");
+      notify("Narration ready");
+    } catch (narrationError) {
+      setNarrationStatus("idle");
+      setError(narrationError.message || "Narration generation failed.");
+    }
+  };
+
+  const assembleVlog = () => {
+    const draft = createVlogDraft({ location, place, assets: uploadedAssets, track: generatedTrack, narration, vlogStyle, exportFormat });
+    setVlogDraft(draft);
+    notify("Vlog assembly ready");
+  };
+
   return (
     <div className="stack generator">
       <button className="return-button" onClick={onBack}>Return home</button>
       <header className="top-header compact">
         <div>
-          <p>Generator</p>
-          <h2>Create soundtrack</h2>
-          <span>Record 15 seconds or use the selected location profile.</span>
+          <p>From Place to Story</p>
+          <h2>Travel vlog studio</h2>
+          <span>Upload footage, analyse the place, generate music and narration, then assemble an export-ready vlog.</span>
         </div>
       </header>
+
+      <UploadPanel assets={uploadedAssets} onUpload={addUploads} />
+
+      <SelectRow label="Location" value={location} setValue={setLocation} options={Object.keys(locationProfiles)} />
+      <SelectRow label="Vlog style" value={vlogStyle} setValue={setVlogStyle} options={vlogStyles} />
 
       <div className="mode-switch">
         <button className={mode === "location" ? "selected" : ""} onClick={() => setMode("location")}>Location profile</button>
         <button className={mode === "recording" ? "selected" : ""} onClick={() => setMode("recording")}>Record my environment</button>
       </div>
-
-      <SelectRow label="Location" value={location} setValue={setLocation} options={Object.keys(locationProfiles)} />
 
       <PlanCard plan={plan} setPlan={setPlan} />
 
@@ -423,6 +487,29 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
       {generatedTrack && (
         <GeneratedResult track={generatedTrack} place={place} onPreview={onPreview} sourceRef={sourceRef} notify={notify} />
       )}
+
+      <NarrationPanel
+        notes={notes}
+        setNotes={setNotes}
+        voice={voice}
+        setVoice={setVoice}
+        narration={narration}
+        status={narrationStatus}
+        onGenerate={generateNarration}
+        onPlay={() => playNarration(narration, narrationRef)}
+        plan={plan}
+      />
+
+      <VlogAssemblyPanel
+        assets={uploadedAssets}
+        track={generatedTrack}
+        narration={narration}
+        draft={vlogDraft}
+        exportFormat={exportFormat}
+        setExportFormat={setExportFormat}
+        onAssemble={assembleVlog}
+        onExport={() => exportVlogDraft(vlogDraft, notify)}
+      />
     </div>
   );
 }
@@ -447,7 +534,7 @@ function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
           </div>
           <FeatureGrid features={track.features} />
           <div className="button-row">
-            <button onClick={() => { playTrack(track, sourceRef); notify("Playing ElevenLabs track"); }}>Play</button>
+            <button onClick={() => { playTrack(track, sourceRef); notify(`Playing ${track.engine} track`); }}>Play</button>
             <button onClick={() => { saveTrack(track); notify("Saved to projects"); }}>Save</button>
             <a className="download-button" href={track.audioUrl} onClick={() => notify("Exporting generated track")} download={track.downloadName}>Export</a>
             <button className="dark" onClick={onPreview}>Preview</button>
@@ -455,6 +542,113 @@ function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function UploadPanel({ assets, onUpload }) {
+  const counts = {
+    videos: assets.filter((asset) => asset.type === "Video").length,
+    photos: assets.filter((asset) => asset.type === "Photo").length,
+    audio: assets.filter((asset) => asset.type === "Audio").length
+  };
+
+  return (
+    <section className="studio-card">
+      <div className="studio-heading">
+        <div>
+          <p>Step 1</p>
+          <h3>Upload content</h3>
+        </div>
+        <label className="upload-button">
+          Add files
+          <input type="file" multiple accept="video/*,image/*,audio/*" onChange={(event) => onUpload(event.target.files)} />
+        </label>
+      </div>
+      <div className="asset-summary">
+        <span>{counts.videos} clips</span>
+        <span>{counts.photos} photos</span>
+        <span>{counts.audio} recordings</span>
+      </div>
+      <div className="asset-strip">
+        {assets.length ? assets.map((asset) => (
+          <div className="asset-tile" key={asset.id}>
+            {asset.type === "Photo" ? <img src={asset.url} alt="" /> : <span>{asset.type}</span>}
+            <strong>{asset.name}</strong>
+          </div>
+        )) : <p>Add video clips, photos, drone footage or environmental audio.</p>}
+      </div>
+    </section>
+  );
+}
+
+function NarrationPanel({ notes, setNotes, voice, setVoice, narration, status, onGenerate, onPlay, plan }) {
+  return (
+    <section className="studio-card">
+      <div className="studio-heading">
+        <div>
+          <p>Step 4</p>
+          <h3>AI travel narration</h3>
+        </div>
+        <button onClick={onGenerate} disabled={status === "generating"}>{status === "generating" ? "Generating..." : "Generate"}</button>
+      </div>
+      <textarea className="notes-input" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Trip notes, route, feeling, must-mention moments..." />
+      <div className="voice-list">
+        {narrationVoices.map((item) => (
+          <button className={voice.id === item.id ? "selected" : ""} key={item.id} onClick={() => setVoice(item)}>
+            <strong>{item.name}</strong>
+            <span>{item.accent}</span>
+          </button>
+        ))}
+      </div>
+      {narration && (
+        <div className="narration-result">
+          <span>{plan === "pro" ? "ElevenLabs narration" : "Local browser narration"}</span>
+          <p>{narration.text}</p>
+          <button onClick={onPlay}>Preview voiceover</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function VlogAssemblyPanel({ assets, track, narration, draft, exportFormat, setExportFormat, onAssemble, onExport }) {
+  const ready = assets.length && track && narration;
+
+  return (
+    <section className="studio-card">
+      <div className="studio-heading">
+        <div>
+          <p>Step 5</p>
+          <h3>Automatic vlog creation</h3>
+        </div>
+        <button onClick={onAssemble} disabled={!ready}>Assemble</button>
+      </div>
+      <SelectRow label="Export format" value={exportFormat} setValue={setExportFormat} options={exportFormats} />
+      <div className="timeline">
+        {["Clips", "Sound DNA", "Music", "Narration", "Captions", "Map", "Transitions"].map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
+      {draft ? (
+        <>
+          <div className="score-board">
+            {Object.entries(draft.scores).map(([label, value]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <strong>{value}%</strong>
+              </div>
+            ))}
+          </div>
+          <div className="render-card">
+            <strong>{draft.title}</strong>
+            <span>Remotion-ready sequence · {draft.format}</span>
+            <button onClick={onExport}>Export project</button>
+          </div>
+        </>
+      ) : (
+        <p className="assembly-copy">Add media, generate music and narration, then assemble a Remotion-ready travel video.</p>
+      )}
+    </section>
   );
 }
 
@@ -598,6 +792,23 @@ function Preview({ track, place, onBack, onUse, notify }) {
 
 function Artists({ onBack, notify }) {
   const artistSourceRef = useRef(null);
+  const [artistName, setArtistName] = useState("");
+  const [artistLocation, setArtistLocation] = useState("Galway");
+  const [artistGenre, setArtistGenre] = useState("");
+  const [songFile, setSongFile] = useState("");
+  const [submissions, setSubmissions] = useState([]);
+
+  const addArtistSong = () => {
+    if (!artistName.trim() || !songFile) {
+      notify("Artist name and song file needed");
+      return;
+    }
+    setSubmissions([{ name: artistName.trim(), location: artistLocation, song: songFile, vibe: artistGenre || "local original", tone: 440, image: places.find((place) => place.name === artistLocation)?.image || places[0].image }, ...submissions]);
+    setArtistName("");
+    setArtistGenre("");
+    setSongFile("");
+    notify("Local song attached to location");
+  };
 
   return (
     <div className="stack">
@@ -609,8 +820,24 @@ function Artists({ onBack, notify }) {
           <span>Use location-linked tracks with credit.</span>
         </div>
       </header>
+      <section className="studio-card">
+        <div className="studio-heading">
+          <div>
+            <p>Artist upload</p>
+            <h3>Attach a song to a place</h3>
+          </div>
+          <button onClick={addArtistSong}>Submit</button>
+        </div>
+        <input className="artist-input" value={artistName} onChange={(event) => setArtistName(event.target.value)} placeholder="Artist name" />
+        <SelectRow label="Location" value={artistLocation} setValue={setArtistLocation} options={Object.keys(locationProfiles)} />
+        <input className="artist-input" value={artistGenre} onChange={(event) => setArtistGenre(event.target.value)} placeholder="Genre or vibe" />
+        <label className="upload-button wide">
+          {songFile || "Choose song file"}
+          <input type="file" accept="audio/*" onChange={(event) => setSongFile(event.target.files?.[0]?.name || "")} />
+        </label>
+      </section>
       <div className="artist-list">
-        {artists.map((artist) => (
+        {[...submissions, ...artists].map((artist) => (
           <article className="artist-card" key={artist.name}>
             <img className="artist-image" src={artist.image} alt="" />
             <div>
@@ -715,7 +942,7 @@ function Profile({ onBack, notify, plan, setPlan }) {
   );
 }
 
-async function createElevenLabsTrack(profile, source, recordingBlob = null, soundDna = createSoundDna(profile, source), location = source) {
+async function createElevenLabsTrack(profile, source, recordingBlob = null, soundDna = createSoundDna(profile, source), location = source, vlogStyle = "Travel Reel") {
   const bpm = chooseBpm(profile, soundDna);
   const mood = chooseMood(profile);
   const title = chooseTitle(profile, source);
@@ -723,7 +950,7 @@ async function createElevenLabsTrack(profile, source, recordingBlob = null, soun
   const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/generate-music`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profile, soundDna, source, location, mood, bpm, instruments, durationMs: profile.calmBusy === "busy" ? 18000 : 22000 })
+    body: JSON.stringify({ profile, soundDna, source, location, mood: `${mood} for ${vlogStyle}`, bpm, instruments, durationMs: profile.calmBusy === "busy" ? 18000 : 22000 })
   });
 
   const data = await readApiJson(response);
@@ -761,6 +988,86 @@ async function createElevenLabsTrack(profile, source, recordingBlob = null, soun
       "Nature/urban": profile.natureUrban
     }
   };
+}
+
+async function createElevenLabsNarration(text, voice) {
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ""}/api/generate-narration`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voiceId: voice.id })
+  });
+  const data = await readApiJson(response);
+  if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Narration generation failed.");
+  if (!data.audioBase64) throw new Error("ElevenLabs did not return narration audio.");
+  const audioBlob = base64ToBlob(data.audioBase64, data.mimeType || "audio/mpeg");
+  return { text, voiceName: voice.name, accent: voice.accent, engine: "ElevenLabs", audioBlob, audioUrl: URL.createObjectURL(audioBlob) };
+}
+
+function createLocalNarration(text, voice) {
+  return { text, voiceName: voice.name, accent: voice.accent, engine: "Local browser voice", audioUrl: "" };
+}
+
+function createNarrationText(location, notes, style) {
+  const profile = locationProfiles[location] || locationProfiles.Galway;
+  const placeLine = `Today we're exploring ${location}, following the sounds of ${profile.detected.slice(0, 3).join(", ")}.`;
+  if (notes.trim()) return `${placeLine} ${notes.trim()} This ${style.toLowerCase()} turns the atmosphere of the place into a short travel story.`;
+  return `${placeLine} This ${style.toLowerCase()} captures the movement, mood and texture of the journey.`;
+}
+
+function playNarration(narration, narrationRef) {
+  if (!narration) return;
+  narrationRef.current?.pause?.();
+  window.speechSynthesis?.cancel?.();
+  if (narration.audioUrl) {
+    const audio = new Audio(narration.audioUrl);
+    audio.play();
+    narrationRef.current = audio;
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(narration.text);
+  utterance.rate = 0.92;
+  utterance.pitch = 0.96;
+  window.speechSynthesis?.speak(utterance);
+}
+
+function createVlogDraft({ location, place, assets, track, narration, vlogStyle, exportFormat }) {
+  const clipCount = Math.max(1, assets.filter((asset) => asset.type === "Video").length + assets.filter((asset) => asset.type === "Photo").length);
+  const musicScore = track?.engine === "ElevenLabs" ? 94 : 82;
+  const dnaScore = Math.min(98, 72 + Math.round((track?.soundDna?.scores?.natural || 30) / 5) + Math.round((track?.soundDna?.scores?.urban || 20) / 8));
+  const watchability = Math.min(98, 62 + clipCount * 5 + (narration ? 10 : 0) + (track ? 10 : 0));
+
+  return {
+    title: `${location} ${vlogStyle}`,
+    location,
+    cover: place.image,
+    format: exportFormat,
+    assets: assets.map((asset) => ({ name: asset.name, type: asset.type })),
+    soundtrack: track?.title || "",
+    narration: narration?.text || "",
+    remotion: {
+      fps: 30,
+      width: exportFormat === "YouTube Travel Vlog" ? 1920 : 1080,
+      height: exportFormat === "YouTube Travel Vlog" ? 1080 : 1920,
+      scenes: ["opening map", "travel montage", "sound dna caption", "place detail", "closing title"]
+    },
+    scores: {
+      Watchability: watchability,
+      "Music match": musicScore,
+      "Sound DNA match": dnaScore
+    }
+  };
+}
+
+function exportVlogDraft(draft, notify) {
+  if (!draft) return;
+  const blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${draft.title.replaceAll(" ", "-").toLowerCase()}-remotion-export.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  notify("Remotion export downloaded");
 }
 
 async function createLocalTrack(profile, source, recordingBlob = null, soundDna = createSoundDna(profile, source)) {

@@ -30,6 +30,11 @@ function createServer() {
       return;
     }
 
+    if (request.url === "/api/generate-narration" && request.method === "POST") {
+      await generateNarration(request, response);
+      return;
+    }
+
     if (apiOnly) {
       sendJson(response, 404, { error: "Not found" });
       return;
@@ -76,6 +81,52 @@ async function generateMusic(request, response) {
     });
   } catch (error) {
     sendJson(response, 500, { error: error.message || "Music generation failed" });
+  }
+}
+
+async function generateNarration(request, response) {
+  if (!process.env.ELEVENLABS_API_KEY) {
+    sendJson(response, 500, { error: "ELEVENLABS_API_KEY is not set" });
+    return;
+  }
+
+  try {
+    const body = JSON.parse(await readBody(request));
+    const text = String(body.text || "").trim();
+    if (!text) {
+      sendJson(response, 400, { error: "Narration text is required" });
+      return;
+    }
+
+    const elevenResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${body.voiceId || "21m00Tcm4TlvDq8ikWAM"}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "xi-api-key": process.env.ELEVENLABS_API_KEY
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: 0.48,
+          similarity_boost: 0.78,
+          style: 0.28,
+          use_speaker_boost: true
+        }
+      })
+    });
+
+    if (!elevenResponse.ok) {
+      sendJson(response, elevenResponse.status, { error: await readElevenLabsError(elevenResponse) });
+      return;
+    }
+
+    sendJson(response, 200, {
+      audioBase64: Buffer.from(await elevenResponse.arrayBuffer()).toString("base64"),
+      mimeType: elevenResponse.headers.get("content-type") || "audio/mpeg"
+    });
+  } catch (error) {
+    sendJson(response, 500, { error: error.message || "Narration generation failed" });
   }
 }
 

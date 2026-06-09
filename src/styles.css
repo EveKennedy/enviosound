@@ -18,7 +18,8 @@ body {
 
 button,
 select,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -263,6 +264,8 @@ a {
 .waveform,
 .mode-switch,
 .plan-card,
+.story-panel,
+.studio-card,
 .bottom-sheet {
   border: 1px solid rgba(250, 250, 249, .16);
   border-radius: 22px;
@@ -313,6 +316,36 @@ a {
   align-items: center;
   padding: 0 16px;
   color: rgba(250, 250, 249, .72);
+}
+
+.story-panel {
+  padding: 15px;
+  display: grid;
+  gap: 10px;
+}
+
+.story-panel strong {
+  color: #fafaf9;
+  font-size: 18px;
+}
+
+.story-panel span {
+  color: rgba(250, 250, 249, .72);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.story-panel button,
+.studio-heading button,
+.upload-button,
+.narration-result button,
+.render-card button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: #ff8c42;
+  color: #0f172a;
+  font-weight: 800;
 }
 
 .search input {
@@ -543,6 +576,216 @@ a {
 
 .generator {
   padding-bottom: 22px;
+}
+
+.studio-card {
+  padding: 15px;
+  display: grid;
+  gap: 13px;
+}
+
+.studio-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.studio-heading p {
+  margin: 0 0 5px;
+  color: #f4c95d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.studio-heading h3 {
+  margin: 0;
+  color: #fafaf9;
+  font-size: 20px;
+}
+
+.upload-button {
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.upload-button.wide {
+  min-height: 46px;
+}
+
+.artist-input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(250, 250, 249, .14);
+  border-radius: 14px;
+  padding: 0 12px;
+  background: rgba(15, 23, 42, .44);
+  color: #fafaf9;
+}
+
+.asset-summary,
+.timeline,
+.voice-list,
+.score-board {
+  display: grid;
+  gap: 8px;
+}
+
+.asset-summary,
+.score-board {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.asset-summary span,
+.timeline span,
+.score-board div,
+.voice-list button,
+.render-card,
+.narration-result {
+  border: 1px solid rgba(250, 250, 249, .12);
+  border-radius: 16px;
+  background: rgba(250, 250, 249, .08);
+}
+
+.asset-summary span {
+  padding: 10px;
+  color: #fafaf9;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.asset-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 128px;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.asset-strip p,
+.assembly-copy {
+  margin: 0;
+  color: rgba(250, 250, 249, .68);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.asset-tile {
+  min-height: 112px;
+  display: grid;
+  gap: 7px;
+}
+
+.asset-tile img,
+.asset-tile > span {
+  width: 128px;
+  height: 76px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: rgba(42, 157, 143, .22);
+}
+
+.asset-tile > span {
+  display: grid;
+  place-items: center;
+  color: #fafaf9;
+  font-weight: 900;
+}
+
+.asset-tile strong {
+  color: rgba(250, 250, 249, .74);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.notes-input {
+  min-height: 92px;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(250, 250, 249, .14);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(15, 23, 42, .44);
+  color: #fafaf9;
+  font: inherit;
+}
+
+.voice-list {
+  grid-template-columns: 1fr;
+}
+
+.voice-list button {
+  padding: 11px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #fafaf9;
+}
+
+.voice-list button.selected {
+  border-color: rgba(244, 201, 93, .72);
+  background: rgba(244, 201, 93, .16);
+}
+
+.voice-list span,
+.narration-result span,
+.render-card span {
+  color: rgba(250, 250, 249, .66);
+  font-size: 12px;
+}
+
+.narration-result,
+.render-card {
+  padding: 12px;
+  display: grid;
+  gap: 9px;
+}
+
+.narration-result p {
+  margin: 0;
+  color: rgba(250, 250, 249, .82);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.timeline {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.timeline span {
+  padding: 9px;
+  color: rgba(250, 250, 249, .82);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.score-board div {
+  min-height: 62px;
+  padding: 10px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+}
+
+.score-board span {
+  color: rgba(250, 250, 249, .62);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.score-board strong,
+.render-card strong {
+  color: #fafaf9;
 }
 
 .mode-switch {

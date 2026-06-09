@@ -1,20 +1,22 @@
 # EnvioSound
 
-A polished mobile prototype for travel vlog soundtrack discovery and generation.
+A polished mobile prototype for AI-powered travel vlog creation.
 
-## Place-to-Music Generator
+## From Place to Story
 
-The shared React/Capacitor app analyses locations or 15-second environmental recordings, builds a Sound DNA profile, then generates music based on the active plan.
+The shared React/Capacitor app turns travel footage, photos and environmental sound into a Remotion-ready travel video plan.
 
+- Uploads video clips, photos, drone footage and environmental audio
 - Records exactly 15 seconds of environmental audio with microphone permission
-- Shows live input bars and a countdown while recording
-- Analyses average volume, dynamic range, brightness, low-frequency energy, noise, pulse intensity, calm/busy, and nature/urban classification
+- Builds a Sound DNA profile for the location
 - Free plan uses the local Sound DNA music model with no API call
-- Pro plan is shown at $6/month and sends the location, mood, Sound DNA, BPM, instruments, and detected sound profile to ElevenLabs
-- Plays and exports the generated audio
-- Supports location average profiles when the user does not record
+- Pro plan is shown at $6/month and sends soundtrack generation to ElevenLabs
+- Generates AI travel narration with ElevenLabs on Pro or local browser narration on Free
+- Assembles a Remotion-ready travel vlog blueprint with clips, captions, maps, transitions, soundtrack and narration
+- Exports format plans for TikTok, Instagram Reels, YouTube Shorts and YouTube Travel Vlog
+- Supports local artist song submissions attached to places
 
-Create a local `.env` file before running generation:
+Create a local `.env` file before using ElevenLabs Pro generation:
 
 ```bash
 ELEVENLABS_API_KEY=your_key_here
