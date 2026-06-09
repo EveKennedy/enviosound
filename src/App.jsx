@@ -699,8 +699,9 @@ async function createElevenLabsTrack(profile, source, recordingBlob = null, soun
     body: JSON.stringify({ profile, soundDna, source, location, mood, bpm, instruments, durationMs: profile.calmBusy === "busy" ? 18000 : 22000 })
   });
 
-  const data = await response.json();
+  const data = await readApiJson(response);
   if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "ElevenLabs music generation failed.");
+  if (!data.audioBase64) throw new Error("ElevenLabs did not return an audio file.");
 
   const audioBlob = base64ToBlob(data.audioBase64, data.mimeType || "audio/mpeg");
   const audioUrl = URL.createObjectURL(audioBlob);
@@ -976,6 +977,16 @@ function base64ToBlob(base64, type) {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type });
+}
+
+async function readApiJson(response) {
+  const text = await response.text();
+  if (!text) return { error: "Music API returned an empty response. Restart the app with npm run dev so the ElevenLabs proxy is running." };
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text };
+  }
 }
 
 function wait(ms) {
