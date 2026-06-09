@@ -1,13 +1,19 @@
 import React, { useMemo, useRef, useState } from "react";
 
 const places = [
-  { id: "galway", name: "Galway", vibe: "Coastal busker mood", tracks: 42, image: "https://images.unsplash.com/photo-1522872527593-0f30223eb522?auto=format&fit=crop&w=900&q=80", sounds: ["waves", "wind", "buskers", "soft crowds"], reco: "Atlantic Drift", desc: "Waves, wind, buskers, soft crowds, and a coastal music profile." },
+  { id: "galway", name: "Galway", vibe: "Coastal busker mood", tracks: 42, image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80", sounds: ["waves", "wind", "buskers", "soft crowds"], reco: "Atlantic Drift", desc: "Waves, wind, buskers, soft crowds, and a coastal music profile." },
   { id: "dublin", name: "Dublin", vibe: "Urban rhythm", tracks: 58, image: "https://images.unsplash.com/photo-1549918864-48ac978761a4?auto=format&fit=crop&w=900&q=80", sounds: ["traffic", "footsteps", "street performers"], reco: "Street Pulse", desc: "Traffic, footsteps, street performers, and a busy city rhythm." },
-  { id: "cliffs", name: "Cliffs of Moher", vibe: "Cinematic calm", tracks: 31, image: "https://images.unsplash.com/photo-1609501676725-7186f734d4db?auto=format&fit=crop&w=900&q=80", sounds: ["wind", "waves", "open space"], reco: "Atlantic Vast", desc: "Wind, waves, open space, and slow cinematic calm." },
+  { id: "cliffs", name: "Cliffs of Moher", vibe: "Cinematic calm", tracks: 31, image: "https://images.unsplash.com/photo-1476610182048-b716b8518aae?auto=format&fit=crop&w=900&q=80", sounds: ["wind", "waves", "open space"], reco: "Atlantic Vast", desc: "Wind, waves, open space, and slow cinematic calm." },
   { id: "london", name: "London", vibe: "Modern city documentary", tracks: 73, image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80", sounds: ["underground", "rain", "crosswalks"], reco: "Afterlight Camden", desc: "Moody synths and polished beats for cinematic city vlogs." },
   { id: "paris", name: "Paris", vibe: "Romantic city mood", tracks: 64, image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80", sounds: ["cafes", "footsteps", "metro"], reco: "Rue Lumiere", desc: "Cafes, footsteps, metro texture, and a romantic city profile." },
   { id: "barcelona", name: "Barcelona", vibe: "Energetic street rhythm", tracks: 49, image: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=900&q=80", sounds: ["crowds", "waves", "street rhythm"], reco: "Golden Ramblas", desc: "Crowds, waves, street rhythm, and energetic percussion." },
-  { id: "cork", name: "Cork", vibe: "Warm indie mood", tracks: 27, image: "https://images.unsplash.com/photo-1590089415225-401ed6f9db8e?auto=format&fit=crop&w=900&q=80", sounds: ["city ambience", "cafes", "river"], reco: "Marina Morning", desc: "City ambience, cafes, river movement, and a warm indie profile." }
+  { id: "cork", name: "Cork", vibe: "Warm indie mood", tracks: 27, image: "https://images.unsplash.com/photo-1590089415225-401ed6f9db8e?auto=format&fit=crop&w=900&q=80", sounds: ["city ambience", "cafes", "river"], reco: "Marina Morning", desc: "City ambience, cafes, river movement, and a warm indie profile." },
+  { id: "lisbon", name: "Lisbon", vibe: "Golden tram sunset", tracks: 38, image: "https://images.unsplash.com/photo-1501927023255-9063be98970c?auto=format&fit=crop&w=900&q=80", sounds: ["trams", "hillside streets", "guitar"], reco: "Alfama Glow", desc: "Trams, tiled streets, guitar echoes, and warm evening movement." },
+  { id: "rome", name: "Rome", vibe: "Ancient city warmth", tracks: 46, image: "https://images.unsplash.com/photo-1529260830199-42c24126f198?auto=format&fit=crop&w=900&q=80", sounds: ["piazzas", "fountains", "scooters"], reco: "Piazza Memory", desc: "Fountains, scooters, footsteps, and a romantic documentary pulse." },
+  { id: "reykjavik", name: "Reykjavik", vibe: "Nordic open air", tracks: 22, image: "https://images.unsplash.com/photo-1504829857797-ddff29c27927?auto=format&fit=crop&w=900&q=80", sounds: ["wind", "harbour", "open roads"], reco: "Northern Quiet", desc: "Cold wind, harbour ambience, open roads, and spacious ambient tones." },
+  { id: "tokyo", name: "Tokyo", vibe: "Night walk energy", tracks: 81, image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=900&q=80", sounds: ["crossings", "train chimes", "rain signs"], reco: "Shibuya Afterimage", desc: "Train chimes, rain, crossings, and bright night rhythm." },
+  { id: "marrakech", name: "Marrakech", vibe: "Market dusk texture", tracks: 34, image: "https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?auto=format&fit=crop&w=900&q=80", sounds: ["markets", "hand drums", "courtyards"], reco: "Medina Dust", desc: "Market voices, hand drums, courtyards, and warm textured percussion." },
+  { id: "newyork", name: "New York", vibe: "Street film rhythm", tracks: 76, image: "https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=900&q=80", sounds: ["subway", "traffic", "footsteps"], reco: "Avenue Cut", desc: "Subway movement, traffic, footsteps, and a fast documentary groove." }
 ];
 
 const locationProfiles = {
@@ -16,14 +22,22 @@ const locationProfiles = {
   "Cliffs of Moher": { averageVolume: 0.36, dynamicRange: 0.58, brightness: 0.42, lowEnergy: 0.54, noiseLevel: 0.31, pulseIntensity: 0.22, calmBusy: "calm", natureUrban: "nature", detected: ["wind", "waves", "open space"] },
   Cork: { averageVolume: 0.49, dynamicRange: 0.46, brightness: 0.52, lowEnergy: 0.44, noiseLevel: 0.44, pulseIntensity: 0.43, calmBusy: "balanced", natureUrban: "urban", detected: ["city ambience", "cafes", "river"] },
   Paris: { averageVolume: 0.52, dynamicRange: 0.45, brightness: 0.58, lowEnergy: 0.48, noiseLevel: 0.50, pulseIntensity: 0.46, calmBusy: "balanced", natureUrban: "urban", detected: ["cafes", "footsteps", "metro"] },
-  Barcelona: { averageVolume: 0.73, dynamicRange: 0.60, brightness: 0.72, lowEnergy: 0.58, noiseLevel: 0.65, pulseIntensity: 0.78, calmBusy: "busy", natureUrban: "urban", detected: ["crowds", "waves", "street rhythm"] }
+  Barcelona: { averageVolume: 0.73, dynamicRange: 0.60, brightness: 0.72, lowEnergy: 0.58, noiseLevel: 0.65, pulseIntensity: 0.78, calmBusy: "busy", natureUrban: "urban", detected: ["crowds", "waves", "street rhythm"] },
+  Lisbon: { averageVolume: 0.54, dynamicRange: 0.50, brightness: 0.64, lowEnergy: 0.42, noiseLevel: 0.48, pulseIntensity: 0.52, calmBusy: "balanced", natureUrban: "urban", detected: ["trams", "hillside streets", "guitar"] },
+  Rome: { averageVolume: 0.60, dynamicRange: 0.52, brightness: 0.58, lowEnergy: 0.50, noiseLevel: 0.56, pulseIntensity: 0.54, calmBusy: "balanced", natureUrban: "urban", detected: ["piazzas", "fountains", "scooters"] },
+  Reykjavik: { averageVolume: 0.32, dynamicRange: 0.55, brightness: 0.38, lowEnergy: 0.58, noiseLevel: 0.30, pulseIntensity: 0.20, calmBusy: "calm", natureUrban: "nature", detected: ["wind", "harbour", "open roads"] },
+  Tokyo: { averageVolume: 0.74, dynamicRange: 0.66, brightness: 0.76, lowEnergy: 0.60, noiseLevel: 0.78, pulseIntensity: 0.82, calmBusy: "busy", natureUrban: "urban", detected: ["crossings", "train chimes", "rain signs"] },
+  Marrakech: { averageVolume: 0.63, dynamicRange: 0.62, brightness: 0.68, lowEnergy: 0.52, noiseLevel: 0.58, pulseIntensity: 0.70, calmBusy: "busy", natureUrban: "urban", detected: ["markets", "hand drums", "courtyards"] },
+  "New York": { averageVolume: 0.78, dynamicRange: 0.64, brightness: 0.70, lowEnergy: 0.68, noiseLevel: 0.82, pulseIntensity: 0.80, calmBusy: "busy", natureUrban: "urban", detected: ["subway", "traffic", "footsteps"] }
 };
 
 const artists = [
-  { name: "Aoife Lane", location: "Galway", song: "Spanish Arch Sunrise", vibe: "indie folk", tone: 392 },
-  { name: "Mika Dubois", location: "Paris", song: "Cafe After Rain", vibe: "dreamy piano", tone: 330 },
-  { name: "Rafa Sol", location: "Barcelona", song: "Gracia Noon", vibe: "sunlit guitar", tone: 440 },
-  { name: "Niamh K.", location: "Dublin", song: "Liffey Gold", vibe: "city pop", tone: 523 }
+  { name: "Aoife Lane", location: "Galway", song: "Spanish Arch Sunrise", vibe: "indie folk", tone: 392, image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=500&q=80" },
+  { name: "Mika Dubois", location: "Paris", song: "Cafe After Rain", vibe: "dreamy piano", tone: 330, image: "https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=500&q=80" },
+  { name: "Rafa Sol", location: "Barcelona", song: "Gracia Noon", vibe: "sunlit guitar", tone: 440, image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=500&q=80" },
+  { name: "Niamh K.", location: "Dublin", song: "Liffey Gold", vibe: "city pop", tone: 523, image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=500&q=80" },
+  { name: "Leila Amrani", location: "Marrakech", song: "Medina Hands", vibe: "warm percussion", tone: 294, image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=500&q=80" },
+  { name: "Ren Sato", location: "Tokyo", song: "Rain Crossing", vibe: "night synth", tone: 587, image: "https://images.unsplash.com/photo-1524650359799-842906ca1c06?auto=format&fit=crop&w=500&q=80" }
 ];
 
 const projects = [
@@ -103,6 +117,7 @@ export function App() {
                   track={generatedTrack}
                   place={currentPlace}
                   onBack={() => setTab("generate")}
+                  notify={notify}
                   onUse={() => {
                     setTab("saved");
                     setShowProfile(false);
@@ -154,7 +169,6 @@ function Onboarding({ onStart, onExplore }) {
 function Home({ onChoose, notify }) {
   const [query, setQuery] = useState("");
   const visiblePlaces = places
-    .slice(0, 6)
     .filter((place) => `${place.name} ${place.vibe} ${place.sounds.join(" ")}`.toLowerCase().includes(query.toLowerCase()));
 
   return (
@@ -195,7 +209,7 @@ function Home({ onChoose, notify }) {
           {!visiblePlaces.length && (
             <div className="empty-state">
               <strong>No exact match yet</strong>
-              <span>Try “coastal”, “urban”, “waves”, “Paris”, or “Dublin”.</span>
+              <span>Try “coastal”, “urban”, “waves”, “Tokyo”, “Lisbon”, or “Dublin”.</span>
               <button onClick={() => { setQuery(""); notify("Search cleared"); }}>Clear search</button>
             </div>
           )}
@@ -212,7 +226,13 @@ function MapScreen({ selected, onBack, onSelect, onCreate }) {
     Cork: [29, 64],
     "Cliffs of Moher": [13, 41],
     Paris: [63, 54],
-    Barcelona: [78, 76]
+    Barcelona: [78, 76],
+    Lisbon: [54, 70],
+    Rome: [68, 67],
+    Reykjavik: [42, 15],
+    Tokyo: [88, 46],
+    Marrakech: [59, 83],
+    "New York": [24, 47]
   };
 
   return (
@@ -392,7 +412,7 @@ function Generator({ location, setLocation, place, generatedTrack, setGeneratedT
 }
 
 function GeneratorImageGallery({ activePlace }) {
-  const galleryPlaces = [activePlace, ...places.filter((place) => place.id !== activePlace.id)].slice(0, 5);
+  const galleryPlaces = [activePlace, ...places.filter((place) => place.id !== activePlace.id)].slice(0, 9);
 
   return (
     <section className="generator-gallery">
@@ -433,7 +453,7 @@ function GeneratedResult({ track, place, onPreview, sourceRef, notify }) {
         <div className="button-row">
           <button onClick={() => { playTrack(track, sourceRef); notify("Playing generated loop"); }}>Play</button>
           <button onClick={() => { saveTrack(track); notify("Saved to projects"); }}>Save</button>
-          <a className="download-button" href={track.wavUrl} download={`${track.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export</a>
+          <a className="download-button" href={track.wavUrl} onClick={() => notify("Exporting WAV loop")} download={`${track.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export</a>
           <button className="dark" onClick={onPreview}>Preview</button>
         </div>
       </div>
@@ -465,7 +485,7 @@ function SelectRow({ label, value, setValue, options }) {
   );
 }
 
-function Preview({ track, place, onBack, onUse }) {
+function Preview({ track, place, onBack, onUse, notify }) {
   const sourceRef = useRef(null);
   const safeTrack = track || createFallbackTrack(place);
 
@@ -473,7 +493,7 @@ function Preview({ track, place, onBack, onUse }) {
     <div className="preview-screen">
       <div className="preview-actions">
         <button className="back-link dark-text" onClick={onBack}>Return to generator</button>
-        <button className="back-link dark-text" onClick={onUse}>Use in vlog</button>
+        <button className="back-link dark-text" onClick={() => { saveTrack(safeTrack); notify("Added to saved projects"); onUse(); }}>Use in vlog</button>
       </div>
       <div className="cover-art" style={{ backgroundImage: `url(${place.image})` }}>
         <span>Generated loop</span>
@@ -483,13 +503,13 @@ function Preview({ track, place, onBack, onUse }) {
       <div className="waveform" aria-label="Generated waveform">
         {safeTrack.waveform.map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}
       </div>
-      <button className="play-button" onClick={() => playTrack(safeTrack, sourceRef)}>Play generated music</button>
+      <button className="play-button" onClick={() => { playTrack(safeTrack, sourceRef); notify("Playing generated music"); }}>Play generated music</button>
       <div className="chips large">
         {[safeTrack.mood, safeTrack.source, "creator-safe", "procedural"].map((tag) => <small key={tag}>{tag}</small>)}
       </div>
       <FeatureGrid features={safeTrack.features} />
-      <a className="primary-action download-link" href={safeTrack.wavUrl} download={`${safeTrack.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export for video</a>
-      <button className="secondary-action" onClick={() => navigator.clipboard?.writeText(`${safeTrack.title} - generated with EnvioSound from environmental sound features.`)}>Copy credit</button>
+      <a className="primary-action download-link" href={safeTrack.wavUrl} onClick={() => notify("Exporting video-ready WAV")} download={`${safeTrack.title.replaceAll(" ", "-").toLowerCase()}.wav`}>Export for video</a>
+      <button className="secondary-action" onClick={() => { navigator.clipboard?.writeText(`${safeTrack.title} - generated with EnvioSound from environmental sound features.`); notify("Credit copied"); }}>Copy credit</button>
     </div>
   );
 }
@@ -510,7 +530,7 @@ function Artists({ onBack, notify }) {
       <div className="artist-list">
         {artists.map((artist) => (
           <article className="artist-card" key={artist.name}>
-            <div className="artist-orb">{artist.name.split(" ").map((part) => part[0]).join("")}</div>
+            <img className="artist-image" src={artist.image} alt="" />
             <div>
               <h3>{artist.name}</h3>
               <p>{artist.location} · {artist.song}</p>
@@ -526,6 +546,7 @@ function Artists({ onBack, notify }) {
 }
 
 function Saved({ onBack, onProfile, notify }) {
+  const [openProject, setOpenProject] = useState("");
   const saved = JSON.parse(localStorage.getItem("enviosound-saved") || "[]");
   const credits = JSON.parse(localStorage.getItem("enviosound-credits") || "[]");
   const allProjects = [...saved.map((track) => ({ name: `${track.title} Project`, location: track.source, mood: track.mood, track: track.title, status: "Ready to export" })), ...projects];
@@ -542,6 +563,7 @@ function Saved({ onBack, onProfile, notify }) {
       </header>
       {allProjects.map((project) => (
         <article className="project-card" key={`${project.name}-${project.track}`}>
+          <img className="project-image" src={(places.find((place) => project.location.includes(place.name)) || places[0]).image} alt="" />
           <div>
             <h3>{project.name}</h3>
             <p>{project.location} · {project.mood}</p>
@@ -549,9 +571,28 @@ function Saved({ onBack, onProfile, notify }) {
           </div>
           <div className="project-actions">
             <strong>{project.status}</strong>
-            <button onClick={() => notify(`Opened ${project.name}`)}>Open</button>
-            <button onClick={() => notify(`${project.track} marked for export`) }>Export</button>
+            <button onClick={() => { setOpenProject(openProject === project.name ? "" : project.name); notify(openProject === project.name ? "Project closed" : `Opened ${project.name}`); }}>Open</button>
+            <button onClick={() => {
+              const blob = new Blob([`EnvioSound Project\n\nTitle: ${project.name}\nLocation: ${project.location}\nMood: ${project.mood}\nTrack: ${project.track}\nStatus: ${project.status}\n`], { type: "text/plain" });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${project.name.replaceAll(" ", "-").toLowerCase()}-export.txt`;
+              link.click();
+              URL.revokeObjectURL(url);
+              notify(`${project.name} export downloaded`);
+            }}>Export</button>
           </div>
+          {openProject === project.name && (
+            <div className="project-detail">
+              <span>Location profile</span>
+              <strong>{project.location}</strong>
+              <span>Soundtrack</span>
+              <strong>{project.track}</strong>
+              <span>Use case</span>
+              <strong>{project.mood} travel edit</strong>
+            </div>
+          )}
         </article>
       ))}
       <section className="credits-panel">

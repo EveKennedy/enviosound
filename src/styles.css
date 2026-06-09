@@ -881,16 +881,24 @@ a {
   padding: 14px;
 }
 
-.artist-orb {
+.artist-orb,
+.artist-image {
   width: 52px;
   height: 52px;
   border: 1px solid rgba(250, 250, 249, .16);
   border-radius: 18px;
+}
+
+.artist-orb {
   display: grid;
   place-items: center;
   background: rgba(42, 157, 143, .22);
   color: #fafaf9;
   font-weight: 900;
+}
+
+.artist-image {
+  object-fit: cover;
 }
 
 .artist-card h3,
@@ -902,13 +910,29 @@ a {
   grid-column: span 1;
 }
 
-.project-card,
 .settings-row {
   padding: 15px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
+}
+
+.project-card {
+  padding: 15px;
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.project-image {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(250, 250, 249, .16);
+  border-radius: 18px;
+  object-fit: cover;
 }
 
 button.settings-row {
@@ -933,6 +957,25 @@ button.settings-row {
   display: grid;
   justify-items: end;
   gap: 7px;
+}
+
+.project-detail {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(250, 250, 249, .12);
+}
+
+.project-detail span {
+  color: rgba(250, 250, 249, .58);
+  font-size: 12px;
+}
+
+.project-detail strong {
+  color: #fafaf9;
+  font-size: 13px;
 }
 
 .credits-panel {
