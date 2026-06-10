@@ -10,7 +10,7 @@ loadEnv();
 const port = Number(process.env.API_PORT || process.env.PORT || 8787);
 
 createServer().listen(port, "0.0.0.0", () => {
-  console.log(apiOnly ? `EnvioSound API running on ${port}` : `EnvioSound running on ${port}`);
+  console.log(apiOnly ? `VlogMate API running on ${port}` : `VlogMate running on ${port}`);
 });
 
 function createServer() {

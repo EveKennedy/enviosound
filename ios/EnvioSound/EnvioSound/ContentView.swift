@@ -91,7 +91,7 @@ struct OnboardingView: View {
                 .ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 28) {
-                Text("EnvioSound")
+                Text("VlogMate")
                     .font(.headline.weight(.bold))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 9)
@@ -139,7 +139,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 6) {
-                            ValueLabel("EnvioSound")
+                            ValueLabel("VlogMate")
                             Text("Where are you filming today?")
                                 .font(.largeTitle.weight(.black))
                                 .frame(maxWidth: 310, alignment: .leading)

@@ -18,7 +18,7 @@ class ErrorBoundary extends React.Component {
       return (
         <main className="startup-fallback">
           <section>
-            <strong>EnvioSound could not start</strong>
+            <strong>VlogMate could not start</strong>
             <p>{this.state.error.message}</p>
             <button onClick={() => window.location.reload()}>Reload app</button>
           </section>

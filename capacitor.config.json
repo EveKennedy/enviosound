@@ -1,6 +1,6 @@
 {
   "appId": "com.enviosound.prototype",
-  "appName": "EnvioSound",
+  "appName": "VlogMate",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

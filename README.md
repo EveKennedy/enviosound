@@ -1,10 +1,10 @@
-# EnvioSound
+# VlogMate
 
 A polished mobile prototype for AI-powered travel vlog creation.
 
 ## From Place to Story
 
-The shared React/Capacitor app turns travel footage, photos and environmental sound into a Remotion-ready travel video plan.
+The shared React/Capacitor app turns travel footage, photos and environmental sound into a finished AI-edited travel vlog.
 
 - Uploads video clips, photos, drone footage and environmental audio
 - Records exactly 15 seconds of environmental audio with microphone permission
@@ -13,9 +13,10 @@ The shared React/Capacitor app turns travel footage, photos and environmental so
 - Pro plan is shown at $6/month and sends soundtrack generation to ElevenLabs
 - Studio can use either a generated Sound DNA soundtrack or a selected Library track
 - Generates AI travel narration with ElevenLabs on Pro or local browser narration on Free
-- Assembles a Remotion-ready travel vlog blueprint with clips, captions, maps, transitions, soundtrack and narration
-- Exports format plans for TikTok, Instagram Reels, YouTube Shorts and YouTube Travel Vlog
+- Generates a finished travel vlog edit with clip ordering, captions, transitions, soundtrack and narration
+- Exports video files for TikTok, Instagram Reels, YouTube Shorts and YouTube Travel Vlog
 - Supports local music Library submissions attached to places
+- Adds an Account section for email registration/sign-in and per-account personal Library tracks
 - Runs a server-side web search copyright check for a chosen Library song before publishing
 
 Create a local `.env` file before using ElevenLabs Pro generation or copyright lookup:
@@ -27,6 +28,8 @@ OPENAI_SEARCH_MODEL=gpt-5.5
 ```
 
 Do not commit real API keys. `OPENAI_API_KEY` is used only by the local/server API route for the Library copyright lookup. The lookup uses the OpenAI Responses API with web search enabled so the app can return current, sourced guidance for a specific song; it is not legal advice and should be confirmed with the rights holder.
+
+Account data is stored locally by email address in browser storage for this prototype. Signing in with the same email restores that account's personal Library tracks on the same device/browser.
 
 For phone builds, deploy `server.js` somewhere private and set `VITE_API_BASE_URL` to that server URL before building the app.
 
